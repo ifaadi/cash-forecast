@@ -1,5 +1,21 @@
-streamlit
-pandas
-plotly
-google-generativeai
-supabase
+# AI-Enabled CFO Cash Forecasting Command Center
+# Free/OSS-First Stack Requirements
+
+# Web Framework
+streamlit>=1.28.0
+
+# Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Visualization
+plotly>=5.17.0
+
+# AI / LLM (Free Tier)
+google-generativeai>=0.3.0
+
+# Database & Auth (Free Tier)
+supabase>=2.0.0
+
+# Additional utilities
+python-dateutil>=2.8.2
