@@ -305,15 +305,31 @@ export default function TransactionsPage() {
       <header className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Transaction Management</h1>
+              <p className="text-sm text-gray-600">{user?.email}</p>
+            </div>
+          </div>
+          <nav className="flex gap-4 border-t pt-4 mt-4">
+            <Button onClick={() => router.push('/dashboard')} variant="outline" size="sm">
+              Dashboard
+            </Button>
+            <Button onClick={() => router.push('/transactions')} variant="default" size="sm">
+              Transactions
+            </Button>
+            <Button onClick={() => router.push('/actuals-vs-forecast')} variant="outline" size="sm">
+              Actuals vs Forecast
+            </Button>
+            <Button onClick={() => router.push('/chat')} variant="outline" size="sm">
+              Ask CFO
+            </Button>
+          </nav>
+          <div className="hidden">
             <div className="flex items-center gap-4">
               <Button onClick={() => router.push('/dashboard')} variant="outline" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Dashboard
               </Button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Transaction Management</h1>
-                <p className="text-sm text-gray-600">{user?.email}</p>
-              </div>
             </div>
           </div>
         </div>

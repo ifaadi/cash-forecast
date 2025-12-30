@@ -124,6 +124,9 @@ export default function ChatPage() {
             <Button onClick={() => router.push('/transactions')} variant="outline" size="sm">
               Transactions
             </Button>
+            <Button onClick={() => router.push('/actuals-vs-forecast')} variant="outline" size="sm">
+              Actuals vs Forecast
+            </Button>
             <Button onClick={() => router.push('/chat')} variant="default" size="sm">
               Ask CFO
             </Button>
