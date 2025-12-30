@@ -1,6 +1,7 @@
 """
 AI-Enabled CFO Cash Forecasting Command Center
 Free/OSS-First Cloud Cash Forecasting System
+Version: 1.0.1
 """
 
 import streamlit as st
