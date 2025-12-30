@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { formatCurrency } from '@/lib/utils'
+import { generateCFOInsights, type ForecastContext } from '@/lib/ai'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,6 +20,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from 'recharts'
+import { Sparkles, Loader2 } from 'lucide-react'
 
 // Force dynamic rendering (disable static generation)
 export const dynamic = 'force-dynamic'
@@ -31,6 +33,10 @@ export default function Dashboard() {
   const [kpis, setKPIs] = useState<any>({})
   const [revenueConfidence, setRevenueConfidence] = useState(100)
   const [expenseBuffer, setExpenseBuffer] = useState(100)
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0])
+  const [forecastWeeks, setForecastWeeks] = useState(13)
+  const [aiInsights, setAIInsights] = useState('')
+  const [loadingAI, setLoadingAI] = useState(false)
 
   useEffect(() => {
     checkUser()
@@ -40,7 +46,7 @@ export default function Dashboard() {
     if (user) {
       loadForecast()
     }
-  }, [user, revenueConfidence, expenseBuffer])
+  }, [user, revenueConfidence, expenseBuffer, startDate, forecastWeeks])
 
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -54,7 +60,7 @@ export default function Dashboard() {
 
   const loadForecast = async () => {
     // For MVP, use mock data
-    const mockData = generateMockForecast(revenueConfidence, expenseBuffer)
+    const mockData = generateMockForecast(revenueConfidence, expenseBuffer, forecastWeeks, startDate)
     setForecastData(mockData.forecast)
     setKPIs(mockData.kpis)
   }
@@ -62,6 +68,23 @@ export default function Dashboard() {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/')
+  }
+
+  const generateInsights = async () => {
+    setLoadingAI(true)
+    try {
+      const context: ForecastContext = {
+        forecast: forecastData,
+        kpis: kpis,
+      }
+      const insights = await generateCFOInsights(context)
+      setAIInsights(insights)
+    } catch (error) {
+      console.error('Error generating insights:', error)
+      setAIInsights('Unable to generate insights at this time. Please try again.')
+    } finally {
+      setLoadingAI(false)
+    }
   }
 
   if (loading) {
@@ -101,10 +124,36 @@ export default function Dashboard() {
         {/* Scenario Controls */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Scenario Planning</CardTitle>
-            <CardDescription>Adjust sliders to model different scenarios</CardDescription>
+            <CardTitle>Forecast Settings & Scenario Planning</CardTitle>
+            <CardDescription>Configure forecast period and adjust scenarios</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Date Range Selector */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4 border-b">
+              <div>
+                <label className="text-sm font-medium block mb-2">Forecast Start Date</label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-2">Forecast Period</label>
+                <select
+                  value={forecastWeeks}
+                  onChange={(e) => setForecastWeeks(Number(e.target.value))}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="8">8 weeks (2 months)</option>
+                  <option value="13">13 weeks (1 quarter)</option>
+                  <option value="26">26 weeks (2 quarters)</option>
+                  <option value="52">52 weeks (1 year)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Scenario Sliders */}
             <div>
               <label className="text-sm font-medium">Revenue Confidence: {revenueConfidence}%</label>
               <input
@@ -188,7 +237,7 @@ export default function Dashboard() {
           {/* Cash Balance Chart */}
           <Card>
             <CardHeader>
-              <CardTitle>13-Week Cash Balance Forecast</CardTitle>
+              <CardTitle>{forecastWeeks}-Week Cash Balance Forecast</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -226,38 +275,43 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* AI Insights Placeholder */}
+        {/* AI Insights */}
         <Card>
           <CardHeader>
-            <CardTitle>AI CFO Insights</CardTitle>
-            <CardDescription>Automated executive summary</CardDescription>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>AI CFO Insights</CardTitle>
+                <CardDescription>Powered by Google Gemini AI</CardDescription>
+              </div>
+              <Button onClick={generateInsights} disabled={loadingAI} size="sm">
+                {loadingAI ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Generate Insights
+                  </>
+                )}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="bg-blue-50 p-4 rounded-lg space-y-3">
-              <div>
-                <p className="text-sm font-semibold text-gray-900">Liquidity Status:</p>
-                <p className="text-sm text-gray-700">
-                  Cash forecast shows {kpis.runway >= 10 ? 'healthy' : 'moderate'} runway for the next 13 weeks.
-                  Lowest point occurs at Week {kpis.lowestWeek || 7} with {formatCurrency(kpis.lowestCash || 0)}.
-                  {kpis.belowThreshold > 0 && ` Warning: ${kpis.belowThreshold} weeks fall below safety threshold.`}
-                </p>
+            {aiInsights ? (
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+                <div className="prose prose-sm max-w-none">
+                  <pre className="whitespace-pre-wrap font-sans text-sm text-gray-800">{aiInsights}</pre>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-900">Key Risks:</p>
-                <p className="text-sm text-gray-700">
-                  Monitor weeks {kpis.lowestWeek || 7}-{(kpis.lowestWeek || 7) + 2} for potential cash constraints.
-                  {kpis.payrollRisk > 0 && ` ${kpis.payrollRisk} payroll periods may be at risk.`}
-                </p>
+            ) : (
+              <div className="bg-gray-50 p-8 rounded-lg text-center border-2 border-dashed border-gray-300">
+                <Sparkles className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+                <p className="text-gray-600 mb-2">No AI insights generated yet</p>
+                <p className="text-sm text-gray-500">Click "Generate Insights" to get AI-powered analysis of your cash forecast</p>
               </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-900">Recommendation:</p>
-                <p className="text-sm text-gray-700">
-                  {revenueConfidence < 90
-                    ? 'Consider accelerating AR collections or securing short-term credit line.'
-                    : 'Maintain current cash management practices. Consider growth investments if runway exceeds 12 weeks.'}
-                </p>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -266,12 +320,13 @@ export default function Dashboard() {
 }
 
 // Mock data generator
-function generateMockForecast(revConf: number, expBuf: number) {
+function generateMockForecast(revConf: number, expBuf: number, weeks: number, startDateStr: string) {
   const forecast = []
   let balance = 250000
   const safetyThreshold = 50000
+  const startDate = new Date(startDateStr)
 
-  for (let week = 1; week <= 13; week++) {
+  for (let week = 1; week <= weeks; week++) {
     const baseInflow = 45000 + (Math.random() * 5000 - 2500)
     const baseOutflow = week % 2 === 0 ? 50000 : 20000
     const additionalExpense = week % 4 === 0 ? 15000 : 0 // Rent every 4 weeks
@@ -281,8 +336,14 @@ function generateMockForecast(revConf: number, expBuf: number) {
     const net = inflow - outflow
     balance += net
 
+    // Calculate the date for this week
+    const weekDate = new Date(startDate)
+    weekDate.setDate(startDate.getDate() + (week - 1) * 7)
+    const weekLabel = `W${week} (${weekDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`
+
     forecast.push({
-      week,
+      week: weekLabel,
+      weekNumber: week,
       inflow: Math.round(inflow),
       outflow: Math.round(outflow),
       net: Math.round(net),
@@ -292,7 +353,7 @@ function generateMockForecast(revConf: number, expBuf: number) {
 
   const balances = forecast.map(f => f.balance)
   const lowestCash = Math.min(...balances)
-  const lowestWeek = forecast.find(f => f.balance === lowestCash)?.week || 0
+  const lowestWeek = forecast.find(f => f.balance === lowestCash)?.weekNumber || 0
   const negativeFlows = forecast.filter(f => f.net < 0)
   const avgBurnRate = negativeFlows.length > 0
     ? Math.abs(negativeFlows.reduce((sum, f) => sum + f.net, 0) / negativeFlows.length)
