@@ -1,6 +1,7 @@
 """
 AI-Enabled CFO Cash Forecasting Command Center
 Free/OSS-First Cloud Cash Forecasting System
+Version: 1.0.1
 """
 
 import streamlit as st
@@ -121,6 +122,7 @@ def login_user(email: str, password: str) -> Tuple[bool, Optional[str]]:
         if response.user:
             # Store user info in session
             st.session_state.user = response.user
+            st.session_state.user_email = response.user.email
             st.session_state.authenticated = True
 
             # Get user profile
@@ -186,7 +188,7 @@ def logout_user():
             pass
 
     # Clear session
-    for key in ['user', 'authenticated', 'user_role', 'company_id']:
+    for key in ['user', 'user_email', 'authenticated', 'user_role', 'company_id']:
         if key in st.session_state:
             del st.session_state[key]
 
@@ -727,7 +729,7 @@ def show_dashboard():
         st.header("⚙️ Control Panel")
 
         # User info
-        user_email = st.session_state.get('user', {}).get('email', 'Demo User')
+        user_email = st.session_state.get('user_email', 'Demo User')
         user_role = st.session_state.get('user_role', 'USER')
         st.info(f"👤 {user_email}\n\n🔐 Role: **{user_role}**")
 
