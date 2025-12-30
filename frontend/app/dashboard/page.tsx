@@ -20,6 +20,9 @@ import {
   ReferenceLine,
 } from 'recharts'
 
+// Force dynamic rendering (disable static generation)
+export const dynamic = 'force-dynamic'
+
 export default function Dashboard() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)

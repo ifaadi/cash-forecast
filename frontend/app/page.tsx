@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
+// Force dynamic rendering (disable static generation)
+export const dynamic = 'force-dynamic'
+
 export default function Home() {
   const router = useRouter()
   const [isLogin, setIsLogin] = useState(true)
