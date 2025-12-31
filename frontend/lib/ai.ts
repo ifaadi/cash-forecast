@@ -20,6 +20,23 @@ export interface ForecastContext {
     volatilityScore: number
   }
   safetyThreshold?: number
+  transactions?: Array<{
+    date: string
+    type: string
+    amount: number
+    category?: string
+    description?: string
+  }>
+  scenarios?: Array<{
+    name: string
+    revenue_adjustment: number
+    expense_adjustment: number
+  }>
+  comparison?: {
+    accuracyScore: number
+    avgVariance: number
+    weeksAnalyzed: number
+  }
   anomalies?: Array<{
     category: string
     amount: number
@@ -86,17 +103,25 @@ export async function askCFO(question: string, context: ForecastContext): Promis
   try {
     const contextText = buildFinancialContext(context)
 
-    const prompt = `You are a CFO assistant answering questions about cash flow.
-
-CRITICAL: Answer ONLY using the financial data below. If the answer isn't in the data, say so.
+    const prompt = `You are an expert CFO with deep financial analysis skills. Answer the question briefly but intelligently.
 
 FINANCIAL DATA:
 ${contextText}
 
-USER QUESTION:
-${question}
+USER QUESTION: ${question}
 
-Provide a clear, concise answer based ONLY on the data above. If you cannot answer from the data provided, explain what information is missing.`
+RESPONSE FORMAT:
+- Use traffic light indicators: 🟢 (good/safe), 🟡 (caution/monitor), 🔴 (critical/urgent)
+- Keep response to 1-2 lines maximum
+- Be specific with numbers and dates
+- Give actionable insight, not just facts
+
+Examples of good responses:
+"🟢 Your runway is solid at ${context.kpis.runway} weeks. Focus on Week ${context.kpis.lowestWeek} where cash dips to $${(context.kpis.lowestCash / 1000000).toFixed(1)}M"
+"🔴 URGENT: ${context.kpis.belowThreshold} weeks below threshold. Cut expenses by $${(context.kpis.burnRate * 0.3 / 1000).toFixed(0)}K/week immediately"
+"🟡 Revenue trending down. Accelerate collections by $${(context.kpis.burnRate * 2 / 1000).toFixed(0)}K before Week ${context.kpis.lowestWeek}"
+
+Now answer the question using the same style - short, smart, with traffic lights.`
 
     return await callGroq(prompt)
   } catch (error: any) {
@@ -107,34 +132,62 @@ Provide a clear, concise answer based ONLY on the data above. If you cannot answ
 }
 
 function buildFinancialContext(context: ForecastContext): string {
-  const { forecast, kpis, anomalies, safetyThreshold = 1000000 } = context
+  const { forecast, kpis, anomalies, safetyThreshold = 1000000, transactions, scenarios, comparison } = context
 
   let text = `=== CASH FORECAST (${forecast.length} WEEKS) ===\n\n`
 
-  text += `WEEKLY CASH FLOW:\n`
+  // Show only critical weeks to keep context short
+  text += `CRITICAL WEEKS:\n`
   forecast.forEach((week) => {
     const flags = []
-    if (week.week === kpis.lowestWeek) flags.push('⚠️ CRITICAL')
-    if (week.balance < safetyThreshold) flags.push('🔴 BELOW THRESHOLD')
-    if (week.net < 0) flags.push('📉 BURN')
+    if (week.week === kpis.lowestWeek) flags.push('⚠️ LOWEST')
+    if (week.balance < safetyThreshold) flags.push('🔴 DANGER')
+    if (week.net < -500000) flags.push('📉 BIG BURN')
 
-    const flagStr = flags.length > 0 ? ` ${flags.join(' ')}` : ''
-    text += `Week ${week.week}: Inflow $${(week.inflow / 1000).toFixed(0)}K | Outflow $${(week.outflow / 1000).toFixed(0)}K | Net $${(week.net / 1000).toFixed(0)}K | Balance $${(week.balance / 1000000).toFixed(1)}M${flagStr}\n`
+    if (flags.length > 0) {
+      text += `Week ${week.week}: Net $${(week.net / 1000).toFixed(0)}K | Balance $${(week.balance / 1000000).toFixed(1)}M ${flags.join(' ')}\n`
+    }
   })
 
   text += `\n=== KEY METRICS ===\n`
   text += `• Safety Threshold: $${(safetyThreshold / 1000000).toFixed(1)}M\n`
   text += `• Lowest Cash: Week ${kpis.lowestWeek} at $${(kpis.lowestCash / 1000000).toFixed(2)}M\n`
-  text += `• Runway: ${kpis.runway} weeks at current burn\n`
+  text += `• Runway: ${kpis.runway} weeks\n`
   text += `• Avg Burn: $${(kpis.burnRate / 1000).toFixed(0)}K/week\n`
   text += `• Weeks Below Threshold: ${kpis.belowThreshold}\n`
-  text += `• Payroll Risk Weeks: ${kpis.payrollRisk}\n`
   text += `• Volatility: ${kpis.volatility}\n`
+
+  // Add transaction insights if available
+  if (transactions && transactions.length > 0) {
+    const recentInflows = transactions.filter(t => t.type === 'Inflow').slice(0, 5)
+    const recentOutflows = transactions.filter(t => t.type === 'Outflow').slice(0, 5)
+    const totalInflow = recentInflows.reduce((sum, t) => sum + t.amount, 0)
+    const totalOutflow = recentOutflows.reduce((sum, t) => sum + t.amount, 0)
+
+    text += `\n=== RECENT ACTIVITY ===\n`
+    text += `• Recent Inflows: $${(totalInflow / 1000).toFixed(0)}K across ${recentInflows.length} transactions\n`
+    text += `• Recent Outflows: $${(totalOutflow / 1000).toFixed(0)}K across ${recentOutflows.length} transactions\n`
+  }
+
+  // Add forecast accuracy if available
+  if (comparison) {
+    text += `\n=== FORECAST ACCURACY ===\n`
+    text += `• Accuracy Score: ${comparison.accuracyScore.toFixed(0)}%\n`
+    text += `• Avg Variance: ${comparison.avgVariance.toFixed(1)}%\n`
+  }
+
+  // Add scenarios if available
+  if (scenarios && scenarios.length > 0) {
+    text += `\n=== SCENARIOS ===\n`
+    scenarios.forEach(s => {
+      text += `• ${s.name}: Rev ${s.revenue_adjustment}%, Exp ${s.expense_adjustment}%\n`
+    })
+  }
 
   if (anomalies && anomalies.length > 0) {
     text += `\n=== ANOMALIES ===\n`
     anomalies.forEach((anom) => {
-      text += `• ${anom.category}: $${(anom.amount / 1000).toFixed(0)}K (${anom.deviation > 0 ? '+' : ''}${anom.deviation.toFixed(0)}% vs avg)\n`
+      text += `• ${anom.category}: $${(anom.amount / 1000).toFixed(0)}K (${anom.deviation > 0 ? '+' : ''}${anom.deviation.toFixed(0)}%)\n`
     })
   }
 
