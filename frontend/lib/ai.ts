@@ -1,5 +1,5 @@
 // AI Service using Groq (Free & Fast Alternative)
-const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || 'gsk_qvP9xH7KcW9YFzJ3vN2FWGdyb3FYZ8mK5nL4pR6tS7uV8wX9yA0bC1dE2fG3h'
+// Calls Next.js API route to avoid CORS issues
 
 export interface ForecastContext {
   forecast: Array<{
@@ -28,35 +28,22 @@ export interface ForecastContext {
 
 async function callGroq(prompt: string): Promise<string> {
   try {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    // Call our Next.js API route instead of Groq directly (avoids CORS)
+    const response = await fetch('/api/groq', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: 'llama-3.1-70b-versatile', // Free, fast, and powerful
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a seasoned CFO providing clear, actionable financial insights.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 1000,
-      }),
+      body: JSON.stringify({ prompt }),
     })
 
     if (!response.ok) {
-      throw new Error(`Groq API error: ${response.status} ${response.statusText}`)
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `API error: ${response.status}`)
     }
 
     const data = await response.json()
-    return data.choices[0]?.message?.content || 'No response generated'
+    return data.response || 'No response generated'
   } catch (error: any) {
     console.error('Groq API Error:', error)
     throw error
