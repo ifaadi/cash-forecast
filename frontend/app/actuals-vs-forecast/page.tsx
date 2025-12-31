@@ -170,8 +170,8 @@ export default function ActualsVsForecastPage() {
 
   const generateMockForecast = (weekNum: number): number => {
     // Mock forecasted values (in production, load from saved forecasts)
-    const baseInflow = 45000
-    const baseOutflow = weekNum % 2 === 0 ? 50000 : 20000
+    const baseInflow = 900000 // $900K inflow
+    const baseOutflow = weekNum % 2 === 0 ? 1000000 : 400000 // $1M or $400K outflow
     return baseInflow - baseOutflow
   }
 
