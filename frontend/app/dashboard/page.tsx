@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { formatCurrency } from '@/lib/utils'
 import { generateCFOInsights, askCFO, type ForecastContext } from '@/lib/ai'
+import { getOrCreateActiveForecast, updateForecast } from '@/lib/forecast-service'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,7 +31,9 @@ export const dynamic = 'force-dynamic'
 export default function Dashboard() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
+  const [companyId, setCompanyId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [forecastId, setForecastId] = useState<string | null>(null)
   const [forecastData, setForecastData] = useState<any[]>([])
   const [kpis, setKPIs] = useState<any>({})
   const [revenueConfidence, setRevenueConfidence] = useState(100)
@@ -42,16 +45,28 @@ export default function Dashboard() {
   const [showPanicMode, setShowPanicMode] = useState(false)
   const [panicAnalysis, setPanicAnalysis] = useState('')
   const [loadingPanic, setLoadingPanic] = useState(false)
+  const [updating, setUpdating] = useState(false)
 
   useEffect(() => {
     checkUser()
   }, [])
 
+  // Load initial forecast
   useEffect(() => {
-    if (user) {
-      loadForecast()
+    if (user && companyId) {
+      loadInitialForecast()
     }
-  }, [user, revenueConfidence, expenseBuffer, startDate, forecastWeeks])
+  }, [user, companyId])
+
+  // Update forecast when parameters change (debounced)
+  useEffect(() => {
+    if (companyId && forecastId && !updating) {
+      const timeoutId = setTimeout(() => {
+        updateForecastData()
+      }, 500) // Debounce for better performance
+      return () => clearTimeout(timeoutId)
+    }
+  }, [revenueConfidence, expenseBuffer, startDate, forecastWeeks, forecastId])
 
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -60,20 +75,169 @@ export default function Dashboard() {
       return
     }
     setUser(user)
+
+    // Fetch company_id from user_profiles
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.company_id) {
+      setCompanyId(profile.company_id)
+    }
+
     setLoading(false)
   }
 
-  const loadForecast = async () => {
-    // For MVP, use mock data
-    const mockData = generateMockForecast(revenueConfidence, expenseBuffer, forecastWeeks, startDate)
-    setForecastData(mockData.forecast)
-    setKPIs(mockData.kpis)
-  }
+  const loadInitialForecast = useCallback(async () => {
+    if (!companyId) {
+      // No company_id, use mock data
+      const mockData = generateMockForecast(100, 100, 13, new Date().toISOString().split('T')[0])
+      setForecastData(mockData.forecast)
+      setKPIs(mockData.kpis)
+      return
+    }
 
-  const handleLogout = async () => {
+    try {
+      setLoading(true)
+      const forecast = await getOrCreateActiveForecast(companyId)
+
+      if (forecast && forecast.forecast_weeks && forecast.forecast_weeks.length > 0) {
+        setForecastId(forecast.id)
+        setStartDate(forecast.start_date)
+        setForecastWeeks(forecast.weeks)
+        setRevenueConfidence(forecast.revenue_confidence)
+        setExpenseBuffer(forecast.expense_buffer)
+
+        // Transform data for display
+        const displayData = forecast.forecast_weeks
+          .sort((a, b) => a.week_number - b.week_number)
+          .map(week => ({
+            week: `W${week.week_number} (${new Date(week.week_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`,
+            weekNumber: week.week_number,
+            inflow: week.inflow,
+            outflow: week.outflow,
+            net: week.net,
+            balance: week.balance,
+          }))
+
+        setForecastData(displayData)
+        calculateKPIs(displayData)
+      } else {
+        // No forecast data from Supabase, use mock data
+        console.log('No forecast data found, using mock data')
+        const mockData = generateMockForecast(100, 100, 13, new Date().toISOString().split('T')[0])
+        setForecastData(mockData.forecast)
+        setKPIs(mockData.kpis)
+      }
+    } catch (error) {
+      console.error('Error loading forecast:', error)
+      // Fallback to mock data if Supabase fails
+      const mockData = generateMockForecast(100, 100, 13, new Date().toISOString().split('T')[0])
+      setForecastData(mockData.forecast)
+      setKPIs(mockData.kpis)
+    } finally {
+      setLoading(false)
+    }
+  }, [companyId])
+
+  const updateForecastData = useCallback(async () => {
+    if (!forecastId) return
+
+    try {
+      setUpdating(true)
+      const updatedForecast = await updateForecast(forecastId, {
+        revenue_confidence: revenueConfidence,
+        expense_buffer: expenseBuffer,
+        weeks: forecastWeeks,
+        start_date: startDate,
+      })
+
+      if (updatedForecast) {
+        const displayData = updatedForecast.forecast_weeks
+          .sort((a, b) => a.week_number - b.week_number)
+          .map(week => ({
+            week: `W${week.week_number} (${new Date(week.week_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`,
+            weekNumber: week.week_number,
+            inflow: week.inflow,
+            outflow: week.outflow,
+            net: week.net,
+            balance: week.balance,
+          }))
+
+        setForecastData(displayData)
+        calculateKPIs(displayData)
+      }
+    } catch (error) {
+      console.error('Error updating forecast:', error)
+    } finally {
+      setUpdating(false)
+    }
+  }, [forecastId, revenueConfidence, expenseBuffer, forecastWeeks, startDate])
+
+  const calculateKPIs = useCallback((data: any[]) => {
+    const balances = data.map(f => f.balance)
+    const lowestCash = Math.min(...balances)
+    const lowestWeek = data.find(f => f.balance === lowestCash)?.weekNumber || 0
+    const negativeFlows = data.filter(f => f.net < 0)
+    const avgBurnRate = negativeFlows.length > 0
+      ? Math.abs(negativeFlows.reduce((sum, f) => sum + f.net, 0) / negativeFlows.length)
+      : 0
+
+    const finalBalance = data[data.length - 1]?.balance || 0
+
+    setKPIs({
+      lowestCash,
+      lowestWeek,
+      runway: avgBurnRate > 0 ? Math.floor(finalBalance / avgBurnRate) : 99,
+      burnRate: Math.round(avgBurnRate),
+      belowThreshold: data.filter(f => f.balance < 1000000).length,
+      payrollRisk: data.filter((f, i) => i % 2 === 0 && f.balance < 2000000).length,
+      volatility: avgBurnRate > 600000 ? 'High' : avgBurnRate > 300000 ? 'Medium' : 'Low',
+      volatilityScore: Math.round(avgBurnRate),
+    })
+  }, [])
+
+  // Memoize waterfall data calculation for performance
+  const waterfallData = useMemo(() => {
+    if (!forecastData.length) return []
+
+    const totalInflows = forecastData.reduce((sum, f) => sum + f.inflow, 0)
+    const totalOutflows = forecastData.reduce((sum, f) => sum + f.outflow, 0)
+    const startingBalance = 5000000
+    const endingBalance = forecastData[forecastData.length - 1]?.balance || 0
+
+    return [
+      {
+        name: 'Starting Cash',
+        value: startingBalance,
+        total: startingBalance,
+        isTotal: true,
+      },
+      {
+        name: 'Total Inflows',
+        value: totalInflows,
+        total: startingBalance + totalInflows,
+      },
+      {
+        name: 'Total Outflows',
+        value: -totalOutflows,
+        total: startingBalance + totalInflows - totalOutflows,
+      },
+      {
+        name: 'Ending Cash',
+        value: endingBalance,
+        total: endingBalance,
+        isTotal: true,
+      },
+    ]
+  }, [forecastData])
+
+  const handleLogout = useCallback(async () => {
     await supabase.auth.signOut()
     router.push('/')
-  }
+  }, [])
 
   const generateInsights = async () => {
     setLoadingAI(true)
@@ -352,30 +516,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <WaterfallChart
-              data={[
-                {
-                  name: 'Starting Cash',
-                  value: 5000000,
-                  total: 5000000,
-                  isTotal: true,
-                },
-                {
-                  name: 'Total Inflows',
-                  value: forecastData.reduce((sum, f) => sum + f.inflow, 0),
-                  total: 5000000 + forecastData.reduce((sum, f) => sum + f.inflow, 0),
-                },
-                {
-                  name: 'Total Outflows',
-                  value: -forecastData.reduce((sum, f) => sum + f.outflow, 0),
-                  total: 5000000 + forecastData.reduce((sum, f) => sum + f.inflow, 0) - forecastData.reduce((sum, f) => sum + f.outflow, 0),
-                },
-                {
-                  name: 'Ending Cash',
-                  value: forecastData[forecastData.length - 1]?.balance || 0,
-                  total: forecastData[forecastData.length - 1]?.balance || 0,
-                  isTotal: true,
-                },
-              ]}
+              data={waterfallData}
               height={350}
             />
           </CardContent>
