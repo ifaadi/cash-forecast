@@ -1,8 +1,13 @@
 -- Fixed migration compatible with existing schema
 -- Uses company_id instead of user_id
 
+-- Drop existing tables if they exist (to ensure clean slate)
+DROP TABLE IF EXISTS forecast_weeks CASCADE;
+DROP TABLE IF EXISTS scenarios CASCADE;
+DROP TABLE IF EXISTS forecasts CASCADE;
+
 -- Create forecasts table for storing cash flow forecasts
-CREATE TABLE IF NOT EXISTS forecasts (
+CREATE TABLE forecasts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
@@ -17,7 +22,7 @@ CREATE TABLE IF NOT EXISTS forecasts (
 );
 
 -- Create forecast_weeks table for detailed week-by-week data
-CREATE TABLE IF NOT EXISTS forecast_weeks (
+CREATE TABLE forecast_weeks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   forecast_id UUID NOT NULL REFERENCES forecasts(id) ON DELETE CASCADE,
   week_number INTEGER NOT NULL,
@@ -32,7 +37,7 @@ CREATE TABLE IF NOT EXISTS forecast_weeks (
 );
 
 -- Create scenarios table for scenario planning
-CREATE TABLE IF NOT EXISTS scenarios (
+CREATE TABLE scenarios (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
   forecast_id UUID REFERENCES forecasts(id) ON DELETE SET NULL,
@@ -44,10 +49,10 @@ CREATE TABLE IF NOT EXISTS scenarios (
 );
 
 -- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_forecasts_company_id ON forecasts(company_id);
-CREATE INDEX IF NOT EXISTS idx_forecasts_active ON forecasts(company_id, is_active) WHERE is_active = true;
-CREATE INDEX IF NOT EXISTS idx_forecast_weeks_forecast_id ON forecast_weeks(forecast_id);
-CREATE INDEX IF NOT EXISTS idx_scenarios_company_id ON scenarios(company_id);
+CREATE INDEX idx_forecasts_company_id ON forecasts(company_id);
+CREATE INDEX idx_forecasts_active ON forecasts(company_id, is_active) WHERE is_active = true;
+CREATE INDEX idx_forecast_weeks_forecast_id ON forecast_weeks(forecast_id);
+CREATE INDEX idx_scenarios_company_id ON scenarios(company_id);
 
 -- Enable Row Level Security
 ALTER TABLE forecasts ENABLE ROW LEVEL SECURITY;
