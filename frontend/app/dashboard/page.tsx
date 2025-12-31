@@ -37,6 +37,7 @@ export default function Dashboard() {
   const [kpis, setKPIs] = useState<any>({})
   const [revenueConfidence, setRevenueConfidence] = useState(100)
   const [expenseBuffer, setExpenseBuffer] = useState(100)
+  const [safetyThreshold, setSafetyThreshold] = useState(1000000) // Default $1M
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0])
   const [forecastWeeks, setForecastWeeks] = useState(13)
   const [aiInsights, setAIInsights] = useState('')
@@ -65,7 +66,16 @@ export default function Dashboard() {
       }, 500) // Debounce for better performance
       return () => clearTimeout(timeoutId)
     }
-  }, [revenueConfidence, expenseBuffer, startDate, forecastWeeks, forecastId])
+  }, [companyId, forecastId, updating, updateForecastData])
+
+  // Update mock data when sliders change (for users without company_id)
+  useEffect(() => {
+    if (!companyId && !loading) {
+      const mockData = generateMockForecast(revenueConfidence, expenseBuffer, forecastWeeks, startDate, safetyThreshold)
+      setForecastData(mockData.forecast)
+      setKPIs(mockData.kpis)
+    }
+  }, [companyId, loading, revenueConfidence, expenseBuffer, forecastWeeks, startDate, safetyThreshold])
 
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -92,7 +102,7 @@ export default function Dashboard() {
   const loadInitialForecast = useCallback(async () => {
     if (!companyId) {
       // No company_id, use mock data
-      const mockData = generateMockForecast(100, 100, 13, new Date().toISOString().split('T')[0])
+      const mockData = generateMockForecast(100, 100, 13, new Date().toISOString().split('T')[0], 1000000)
       setForecastData(mockData.forecast)
       setKPIs(mockData.kpis)
       return
@@ -108,6 +118,7 @@ export default function Dashboard() {
         setForecastWeeks(forecast.weeks)
         setRevenueConfidence(forecast.revenue_confidence)
         setExpenseBuffer(forecast.expense_buffer)
+        setSafetyThreshold(forecast.safety_threshold || 1000000) // Default to $1M if not set
 
         // Transform data for display
         const displayData = forecast.forecast_weeks
@@ -126,20 +137,20 @@ export default function Dashboard() {
       } else {
         // No forecast data from Supabase, use mock data
         console.log('No forecast data found, using mock data')
-        const mockData = generateMockForecast(100, 100, 13, new Date().toISOString().split('T')[0])
+        const mockData = generateMockForecast(100, 100, 13, new Date().toISOString().split('T')[0], 1000000)
         setForecastData(mockData.forecast)
         setKPIs(mockData.kpis)
       }
     } catch (error) {
       console.error('Error loading forecast:', error)
       // Fallback to mock data if Supabase fails
-      const mockData = generateMockForecast(100, 100, 13, new Date().toISOString().split('T')[0])
+      const mockData = generateMockForecast(100, 100, 13, new Date().toISOString().split('T')[0], 1000000)
       setForecastData(mockData.forecast)
       setKPIs(mockData.kpis)
     } finally {
       setLoading(false)
     }
-  }, [companyId])
+  }, [companyId, calculateKPIs])
 
   const updateForecastData = useCallback(async () => {
     if (!forecastId) return
@@ -149,6 +160,7 @@ export default function Dashboard() {
       const updatedForecast = await updateForecast(forecastId, {
         revenue_confidence: revenueConfidence,
         expense_buffer: expenseBuffer,
+        safety_threshold: safetyThreshold,
         weeks: forecastWeeks,
         start_date: startDate,
       })
@@ -173,7 +185,7 @@ export default function Dashboard() {
     } finally {
       setUpdating(false)
     }
-  }, [forecastId, revenueConfidence, expenseBuffer, forecastWeeks, startDate])
+  }, [forecastId, revenueConfidence, expenseBuffer, safetyThreshold, forecastWeeks, startDate, calculateKPIs])
 
   const calculateKPIs = useCallback((data: any[]) => {
     const balances = data.map(f => f.balance)
@@ -191,12 +203,12 @@ export default function Dashboard() {
       lowestWeek,
       runway: avgBurnRate > 0 ? Math.floor(finalBalance / avgBurnRate) : 99,
       burnRate: Math.round(avgBurnRate),
-      belowThreshold: data.filter(f => f.balance < 1000000).length,
-      payrollRisk: data.filter((f, i) => i % 2 === 0 && f.balance < 2000000).length,
+      belowThreshold: data.filter(f => f.balance < safetyThreshold).length,
+      payrollRisk: data.filter((f, i) => i % 2 === 0 && f.balance < safetyThreshold * 2).length,
       volatility: avgBurnRate > 600000 ? 'High' : avgBurnRate > 300000 ? 'Medium' : 'Low',
       volatilityScore: Math.round(avgBurnRate),
     })
-  }, [])
+  }, [safetyThreshold])
 
   // Format Y-axis values to abbreviated currency
   const formatYAxis = (value: number) => {
@@ -368,6 +380,26 @@ export default function Dashboard() {
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
               />
             </div>
+            <div>
+              <label className="text-sm font-medium">
+                Safety Threshold: {formatCurrency(safetyThreshold)}
+                <span className="text-xs text-gray-500 ml-2">(Minimum cash reserve)</span>
+              </label>
+              <input
+                type="range"
+                min="500000"
+                max="5000000"
+                step="100000"
+                value={safetyThreshold}
+                onChange={(e) => setSafetyThreshold(Number(e.target.value))}
+                className="w-full h-2 bg-red-200 rounded-lg appearance-none cursor-pointer"
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>$500K</span>
+                <span>$2.75M</span>
+                <span>$5M</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -464,7 +496,7 @@ export default function Dashboard() {
                   />
                   <Tooltip formatter={(value: any) => formatCurrency(value)} />
                   <Legend />
-                  <ReferenceLine y={1000000} stroke="#ef4444" strokeDasharray="3 3" label="Safety Threshold" />
+                  <ReferenceLine y={safetyThreshold} stroke="#ef4444" strokeDasharray="3 3" label="Safety Threshold" />
                   <Line type="monotone" dataKey="balance" stroke="#6366f1" strokeWidth={3} name="Cash Balance" dot={{ fill: '#6366f1', r: 4 }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
@@ -745,10 +777,9 @@ export default function Dashboard() {
 }
 
 // Mock data generator
-function generateMockForecast(revConf: number, expBuf: number, weeks: number, startDateStr: string) {
+function generateMockForecast(revConf: number, expBuf: number, weeks: number, startDateStr: string, safetyThreshold: number = 1000000) {
   const forecast = []
   let balance = 5000000 // Starting balance: $5M
-  const safetyThreshold = 1000000 // Safety threshold: $1M
   const startDate = new Date(startDateStr)
 
   for (let week = 1; week <= weeks; week++) {
@@ -795,7 +826,7 @@ function generateMockForecast(revConf: number, expBuf: number, weeks: number, st
       runway: avgBurnRate > 0 ? Math.floor(balance / avgBurnRate) : 99,
       burnRate: Math.round(avgBurnRate),
       belowThreshold: forecast.filter(f => f.balance < safetyThreshold).length,
-      payrollRisk: forecast.filter((f, i) => i % 2 === 0 && f.balance < 2000000).length,
+      payrollRisk: forecast.filter((f, i) => i % 2 === 0 && f.balance < safetyThreshold * 2).length,
       volatility: avgBurnRate > 600000 ? 'High' : avgBurnRate > 300000 ? 'Medium' : 'Low',
       volatilityScore: Math.round(avgBurnRate),
     },

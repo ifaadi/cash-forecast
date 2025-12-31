@@ -465,7 +465,7 @@ export default function ActualsVsForecastPage() {
                       <br />
                       <strong>Critical Actions:</strong>
                       1) Add more transactions for accurate actuals
-                      2) Adjust Revenue Confidence (currently {revenueConfidence}%) & Expense Buffer on Dashboard
+                      2) Adjust Revenue Confidence & Expense Buffer sliders on Dashboard
                       3) Review cash flow timing assumptions
                     </p>
                   </div>
