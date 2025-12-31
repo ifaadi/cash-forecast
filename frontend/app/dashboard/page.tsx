@@ -23,7 +23,6 @@ import {
   ReferenceLine,
 } from 'recharts'
 import { Sparkles, Loader2, AlertTriangle, Phone, DollarSign, TrendingDown, Zap } from 'lucide-react'
-import { WaterfallChart } from '@/components/waterfall-chart'
 
 // Force dynamic rendering (disable static generation)
 export const dynamic = 'force-dynamic'
@@ -199,40 +198,15 @@ export default function Dashboard() {
     })
   }, [])
 
-  // Memoize waterfall data calculation for performance
-  const waterfallData = useMemo(() => {
-    if (!forecastData.length) return []
-
-    const totalInflows = forecastData.reduce((sum, f) => sum + f.inflow, 0)
-    const totalOutflows = forecastData.reduce((sum, f) => sum + f.outflow, 0)
-    const startingBalance = 5000000
-    const endingBalance = forecastData[forecastData.length - 1]?.balance || 0
-
-    return [
-      {
-        name: 'Starting Cash',
-        value: startingBalance,
-        total: startingBalance,
-        isTotal: true,
-      },
-      {
-        name: 'Total Inflows',
-        value: totalInflows,
-        total: startingBalance + totalInflows,
-      },
-      {
-        name: 'Total Outflows',
-        value: -totalOutflows,
-        total: startingBalance + totalInflows - totalOutflows,
-      },
-      {
-        name: 'Ending Cash',
-        value: endingBalance,
-        total: endingBalance,
-        isTotal: true,
-      },
-    ]
-  }, [forecastData])
+  // Format Y-axis values to abbreviated currency
+  const formatYAxis = (value: number) => {
+    if (value >= 1000000) {
+      return `$${(value / 1000000).toFixed(1)}M`
+    } else if (value >= 1000) {
+      return `$${(value / 1000).toFixed(0)}K`
+    }
+    return `$${value}`
+  }
 
   const handleLogout = useCallback(async () => {
     await supabase.auth.signOut()
@@ -475,9 +449,19 @@ export default function Dashboard() {
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={forecastData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="week" label={{ value: 'Week', position: 'insideBottom', offset: -5 }} />
-                  <YAxis label={{ value: 'Cash Balance ($)', angle: -90, position: 'insideLeft' }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="week"
+                    tick={{ fontSize: 11 }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                  />
+                  <YAxis
+                    tickFormatter={formatYAxis}
+                    tick={{ fontSize: 12 }}
+                    width={70}
+                  />
                   <Tooltip formatter={(value: any) => formatCurrency(value)} />
                   <Legend />
                   <ReferenceLine y={1000000} stroke="#ef4444" strokeDasharray="3 3" label="Safety Threshold" />
@@ -495,9 +479,19 @@ export default function Dashboard() {
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={forecastData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="week" label={{ value: 'Week', position: 'insideBottom', offset: -5 }} />
-                  <YAxis label={{ value: 'Amount ($)', angle: -90, position: 'insideLeft' }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="week"
+                    tick={{ fontSize: 11 }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                  />
+                  <YAxis
+                    tickFormatter={formatYAxis}
+                    tick={{ fontSize: 12 }}
+                    width={70}
+                  />
                   <Tooltip formatter={(value: any) => formatCurrency(value)} />
                   <Legend />
                   <Bar dataKey="inflow" fill="#10b981" name="Inflows" />
@@ -507,20 +501,6 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
-
-        {/* Waterfall Chart */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Cash Flow Waterfall Analysis</CardTitle>
-            <CardDescription>Visual breakdown of cash movements and final position</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <WaterfallChart
-              data={waterfallData}
-              height={350}
-            />
-          </CardContent>
-        </Card>
 
         {/* AI Insights */}
         <Card>
