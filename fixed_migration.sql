@@ -319,6 +319,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Drop existing trigger if it exists
+DROP TRIGGER IF EXISTS trigger_auto_generate_dummy_data ON public.companies;
+
 CREATE TRIGGER trigger_auto_generate_dummy_data
 AFTER INSERT ON public.companies
 FOR EACH ROW
