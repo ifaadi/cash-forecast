@@ -66,7 +66,16 @@ export default function Dashboard() {
       }, 500) // Debounce for better performance
       return () => clearTimeout(timeoutId)
     }
-  }, [revenueConfidence, expenseBuffer, safetyThreshold, startDate, forecastWeeks, forecastId])
+  }, [companyId, forecastId, updating, updateForecastData])
+
+  // Update mock data when sliders change (for users without company_id)
+  useEffect(() => {
+    if (!companyId && !loading) {
+      const mockData = generateMockForecast(revenueConfidence, expenseBuffer, forecastWeeks, startDate, safetyThreshold)
+      setForecastData(mockData.forecast)
+      setKPIs(mockData.kpis)
+    }
+  }, [companyId, loading, revenueConfidence, expenseBuffer, forecastWeeks, startDate, safetyThreshold])
 
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -93,7 +102,7 @@ export default function Dashboard() {
   const loadInitialForecast = useCallback(async () => {
     if (!companyId) {
       // No company_id, use mock data
-      const mockData = generateMockForecast(100, 100, 13, new Date().toISOString().split('T')[0])
+      const mockData = generateMockForecast(100, 100, 13, new Date().toISOString().split('T')[0], 1000000)
       setForecastData(mockData.forecast)
       setKPIs(mockData.kpis)
       return
@@ -128,20 +137,20 @@ export default function Dashboard() {
       } else {
         // No forecast data from Supabase, use mock data
         console.log('No forecast data found, using mock data')
-        const mockData = generateMockForecast(100, 100, 13, new Date().toISOString().split('T')[0])
+        const mockData = generateMockForecast(100, 100, 13, new Date().toISOString().split('T')[0], 1000000)
         setForecastData(mockData.forecast)
         setKPIs(mockData.kpis)
       }
     } catch (error) {
       console.error('Error loading forecast:', error)
       // Fallback to mock data if Supabase fails
-      const mockData = generateMockForecast(100, 100, 13, new Date().toISOString().split('T')[0])
+      const mockData = generateMockForecast(100, 100, 13, new Date().toISOString().split('T')[0], 1000000)
       setForecastData(mockData.forecast)
       setKPIs(mockData.kpis)
     } finally {
       setLoading(false)
     }
-  }, [companyId])
+  }, [companyId, calculateKPIs])
 
   const updateForecastData = useCallback(async () => {
     if (!forecastId) return
@@ -176,7 +185,7 @@ export default function Dashboard() {
     } finally {
       setUpdating(false)
     }
-  }, [forecastId, revenueConfidence, expenseBuffer, safetyThreshold, forecastWeeks, startDate])
+  }, [forecastId, revenueConfidence, expenseBuffer, safetyThreshold, forecastWeeks, startDate, calculateKPIs])
 
   const calculateKPIs = useCallback((data: any[]) => {
     const balances = data.map(f => f.balance)
@@ -768,10 +777,9 @@ export default function Dashboard() {
 }
 
 // Mock data generator
-function generateMockForecast(revConf: number, expBuf: number, weeks: number, startDateStr: string) {
+function generateMockForecast(revConf: number, expBuf: number, weeks: number, startDateStr: string, safetyThreshold: number = 1000000) {
   const forecast = []
   let balance = 5000000 // Starting balance: $5M
-  const safetyThreshold = 1000000 // Safety threshold: $1M
   const startDate = new Date(startDateStr)
 
   for (let week = 1; week <= weeks; week++) {
@@ -818,7 +826,7 @@ function generateMockForecast(revConf: number, expBuf: number, weeks: number, st
       runway: avgBurnRate > 0 ? Math.floor(balance / avgBurnRate) : 99,
       burnRate: Math.round(avgBurnRate),
       belowThreshold: forecast.filter(f => f.balance < safetyThreshold).length,
-      payrollRisk: forecast.filter((f, i) => i % 2 === 0 && f.balance < 2000000).length,
+      payrollRisk: forecast.filter((f, i) => i % 2 === 0 && f.balance < safetyThreshold * 2).length,
       volatility: avgBurnRate > 600000 ? 'High' : avgBurnRate > 300000 ? 'Medium' : 'Low',
       volatilityScore: Math.round(avgBurnRate),
     },
