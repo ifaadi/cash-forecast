@@ -32,7 +32,7 @@ export interface ForecastContext {
 
 export async function generateCFOInsights(context: ForecastContext): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
 
     const contextText = buildFinancialContext(context)
 
@@ -77,7 +77,7 @@ Keep it executive-ready: clear, concise, and action-oriented.`
 
 export async function askCFO(question: string, context: ForecastContext): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
 
     const contextText = buildFinancialContext(context)
 
@@ -140,7 +140,7 @@ function buildFinancialContext(context: ForecastContext): string {
 
 export async function* streamCFOResponse(question: string, context: ForecastContext) {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
 
     const contextText = buildFinancialContext(context)
 
