@@ -60,10 +60,13 @@ export default function Dashboard() {
 
   // Update forecast when parameters change (debounced)
   useEffect(() => {
-    if (companyId && forecastId && !updating) {
+    console.log('🔄 Slider changed', { revenueConfidence, expenseBuffer, safetyThreshold })
+    if (companyId && forecastId && !updating && !loading) {
+      console.log('✅ Scheduling database update...')
       const timeoutId = setTimeout(async () => {
         try {
           setUpdating(true)
+          console.log('📤 Updating forecast:', { revenueConfidence, expenseBuffer, safetyThreshold, forecastWeeks, startDate })
           const updatedForecast = await updateForecast(forecastId, {
             revenue_confidence: revenueConfidence,
             expense_buffer: expenseBuffer,
@@ -71,6 +74,8 @@ export default function Dashboard() {
             weeks: forecastWeeks,
             start_date: startDate,
           })
+
+          console.log('📥 Got updated forecast:', !!updatedForecast)
 
           if (updatedForecast) {
             const displayData = updatedForecast.forecast_weeks
@@ -97,7 +102,7 @@ export default function Dashboard() {
 
             const finalBalance = displayData[displayData.length - 1]?.balance || 0
 
-            setKPIs({
+            const newKPIs = {
               lowestCash,
               lowestWeek,
               runway: avgBurnRate > 0 ? Math.floor(finalBalance / avgBurnRate) : 99,
@@ -106,24 +111,34 @@ export default function Dashboard() {
               payrollRisk: displayData.filter((f, i) => i % 2 === 0 && f.balance < safetyThreshold * 2).length,
               volatility: avgBurnRate > 600000 ? 'High' : avgBurnRate > 300000 ? 'Medium' : 'Low',
               volatilityScore: Math.round(avgBurnRate),
-            })
+            }
+            console.log('📊 Updated KPIs:', newKPIs)
+            setKPIs(newKPIs)
           }
         } catch (error) {
-          console.error('Error updating forecast:', error)
+          console.error('❌ Update error:', error)
         } finally {
           setUpdating(false)
         }
-      }, 500) // Debounce for better performance
+      }, 500)
       return () => clearTimeout(timeoutId)
+    } else {
+      console.log('⏭️ Skipped update:', { hasCompanyId: !!companyId, hasForecastId: !!forecastId, isUpdating: updating, isLoading: loading })
     }
-  }, [companyId, forecastId, updating, revenueConfidence, expenseBuffer, safetyThreshold, startDate, forecastWeeks])
+    // NOTE: Do NOT include 'updating' in dependencies - it would create a loop!
+  }, [companyId, forecastId, loading, revenueConfidence, expenseBuffer, safetyThreshold, startDate, forecastWeeks])
 
   // Update mock data when sliders change (for users without company_id)
   useEffect(() => {
+    console.log('🎭 Mock data effect triggered', { companyId, loading, revenueConfidence, expenseBuffer, safetyThreshold })
     if (!companyId && !loading) {
+      console.log('✅ Generating mock data with:', { revenueConfidence, expenseBuffer, forecastWeeks, startDate, safetyThreshold })
       const mockData = generateMockForecast(revenueConfidence, expenseBuffer, forecastWeeks, startDate, safetyThreshold)
+      console.log('📊 Mock KPIs:', mockData.kpis)
       setForecastData(mockData.forecast)
       setKPIs(mockData.kpis)
+    } else {
+      console.log('⏭️ Skipping mock data:', { hasCompanyId: !!companyId, isLoading: loading })
     }
   }, [companyId, loading, revenueConfidence, expenseBuffer, forecastWeeks, startDate, safetyThreshold])
 
