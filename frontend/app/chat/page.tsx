@@ -190,7 +190,7 @@ export default function ChatPage() {
               <Button
                 onClick={handleSend}
                 disabled={loading || !input.trim()}
-                size="icon"
+                size="sm"
               >
                 <Send className="w-4 h-4" />
               </Button>
