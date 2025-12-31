@@ -1,9 +1,5 @@
-// AI Service for Gemini Integration
-import { GoogleGenerativeAI } from '@google/generative-ai'
-
-const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyDub7S0CpV9RJGvFKieo31UEbXVRS95lzE'
-
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
+// AI Service using Groq (Free & Fast Alternative)
+const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || 'gsk_qvP9xH7KcW9YFzJ3vN2FWGdyb3FYZ8mK5nL4pR6tS7uV8wX9yA0bC1dE2fG3h'
 
 export interface ForecastContext {
   forecast: Array<{
@@ -30,13 +26,48 @@ export interface ForecastContext {
   }>
 }
 
+async function callGroq(prompt: string): Promise<string> {
+  try {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-70b-versatile', // Free, fast, and powerful
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a seasoned CFO providing clear, actionable financial insights.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 1000,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Groq API error: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    return data.choices[0]?.message?.content || 'No response generated'
+  } catch (error: any) {
+    console.error('Groq API Error:', error)
+    throw error
+  }
+}
+
 export async function generateCFOInsights(context: ForecastContext): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
-
     const contextText = buildFinancialContext(context)
 
-    const prompt = `You are a seasoned CFO analyzing a 13-week cash forecast.
+    const prompt = `You are a seasoned CFO analyzing a cash forecast.
 
 CRITICAL RULES:
 1. Use ONLY the data provided below
@@ -65,20 +96,16 @@ Provide a concise CFO Executive Summary with:
 
 Keep it executive-ready: clear, concise, and action-oriented.`
 
-    const result = await model.generateContent(prompt)
-    const response = await result.response
-    return response.text()
+    return await callGroq(prompt)
   } catch (error: any) {
-    console.error('Gemini AI Error:', error)
+    console.error('AI Error:', error)
     const errorMsg = error?.message || error?.toString() || 'Unknown error'
-    return `Unable to generate AI insights. Error: ${errorMsg}\n\nPlease ensure your Gemini API key is set in Vercel environment variables as NEXT_PUBLIC_GEMINI_API_KEY.`
+    return `Unable to generate AI insights. Error: ${errorMsg}\n\nPlease ensure your Groq API key is set in Vercel environment variables as NEXT_PUBLIC_GROQ_API_KEY.\nGet a free key at: https://console.groq.com`
   }
 }
 
 export async function askCFO(question: string, context: ForecastContext): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
-
     const contextText = buildFinancialContext(context)
 
     const prompt = `You are a CFO assistant answering questions about cash flow.
@@ -93,13 +120,11 @@ ${question}
 
 Provide a clear, concise answer based ONLY on the data above. If you cannot answer from the data provided, explain what information is missing.`
 
-    const result = await model.generateContent(prompt)
-    const response = await result.response
-    return response.text()
+    return await callGroq(prompt)
   } catch (error: any) {
-    console.error('Gemini AI Error:', error)
+    console.error('AI Error:', error)
     const errorMsg = error?.message || error?.toString() || 'Unknown error'
-    return `Sorry, I encountered an error: ${errorMsg}\n\nPlease ensure your Gemini API key is set in Vercel environment variables as NEXT_PUBLIC_GEMINI_API_KEY.`
+    return `Sorry, I encountered an error: ${errorMsg}\n\nPlease ensure your Groq API key is set in Vercel environment variables as NEXT_PUBLIC_GROQ_API_KEY.`
   }
 }
 
@@ -138,33 +163,3 @@ function buildFinancialContext(context: ForecastContext): string {
   return text
 }
 
-export async function* streamCFOResponse(question: string, context: ForecastContext) {
-  try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
-
-    const contextText = buildFinancialContext(context)
-
-    const prompt = `You are a CFO assistant answering questions about cash flow.
-
-CRITICAL: Answer ONLY using the financial data below. If the answer isn't in the data, say so.
-
-FINANCIAL DATA:
-${contextText}
-
-USER QUESTION:
-${question}
-
-Provide a clear, concise answer based ONLY on the data above.`
-
-    const result = await model.generateContentStream(prompt)
-
-    for await (const chunk of result.stream) {
-      const text = chunk.text()
-      yield text
-    }
-  } catch (error: any) {
-    console.error('Streaming Error:', error)
-    const errorMsg = error?.message || error?.toString() || 'Unknown error'
-    yield `Sorry, I encountered an error: ${errorMsg}. Please ensure your Gemini API key is configured correctly.`
-  }
-}
