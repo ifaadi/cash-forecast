@@ -91,13 +91,19 @@ export default function Dashboard() {
   }
 
   const loadInitialForecast = useCallback(async () => {
-    if (!companyId) return
+    if (!companyId) {
+      // No company_id, use mock data
+      const mockData = generateMockForecast(100, 100, 13, new Date().toISOString().split('T')[0])
+      setForecastData(mockData.forecast)
+      setKPIs(mockData.kpis)
+      return
+    }
 
     try {
       setLoading(true)
       const forecast = await getOrCreateActiveForecast(companyId)
 
-      if (forecast) {
+      if (forecast && forecast.forecast_weeks && forecast.forecast_weeks.length > 0) {
         setForecastId(forecast.id)
         setStartDate(forecast.start_date)
         setForecastWeeks(forecast.weeks)
@@ -118,6 +124,12 @@ export default function Dashboard() {
 
         setForecastData(displayData)
         calculateKPIs(displayData)
+      } else {
+        // No forecast data from Supabase, use mock data
+        console.log('No forecast data found, using mock data')
+        const mockData = generateMockForecast(100, 100, 13, new Date().toISOString().split('T')[0])
+        setForecastData(mockData.forecast)
+        setKPIs(mockData.kpis)
       }
     } catch (error) {
       console.error('Error loading forecast:', error)
