@@ -32,7 +32,7 @@ export interface ForecastContext {
 
 export async function generateCFOInsights(context: ForecastContext): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
     const contextText = buildFinancialContext(context)
 
@@ -68,15 +68,16 @@ Keep it executive-ready: clear, concise, and action-oriented.`
     const result = await model.generateContent(prompt)
     const response = await result.response
     return response.text()
-  } catch (error) {
+  } catch (error: any) {
     console.error('Gemini AI Error:', error)
-    return 'Unable to generate AI insights. Please check your API key and try again.'
+    const errorMsg = error?.message || error?.toString() || 'Unknown error'
+    return `Unable to generate AI insights. Error: ${errorMsg}\n\nPlease ensure your Gemini API key is set in Vercel environment variables as NEXT_PUBLIC_GEMINI_API_KEY.`
   }
 }
 
 export async function askCFO(question: string, context: ForecastContext): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
     const contextText = buildFinancialContext(context)
 
@@ -95,9 +96,10 @@ Provide a clear, concise answer based ONLY on the data above. If you cannot answ
     const result = await model.generateContent(prompt)
     const response = await result.response
     return response.text()
-  } catch (error) {
+  } catch (error: any) {
     console.error('Gemini AI Error:', error)
-    return 'Sorry, I encountered an error processing your question. Please try again.'
+    const errorMsg = error?.message || error?.toString() || 'Unknown error'
+    return `Sorry, I encountered an error: ${errorMsg}\n\nPlease ensure your Gemini API key is set in Vercel environment variables as NEXT_PUBLIC_GEMINI_API_KEY.`
   }
 }
 
@@ -138,7 +140,7 @@ function buildFinancialContext(context: ForecastContext): string {
 
 export async function* streamCFOResponse(question: string, context: ForecastContext) {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
     const contextText = buildFinancialContext(context)
 
@@ -160,8 +162,9 @@ Provide a clear, concise answer based ONLY on the data above.`
       const text = chunk.text()
       yield text
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Streaming Error:', error)
-    yield 'Sorry, I encountered an error. Please try again.'
+    const errorMsg = error?.message || error?.toString() || 'Unknown error'
+    yield `Sorry, I encountered an error: ${errorMsg}. Please ensure your Gemini API key is configured correctly.`
   }
 }
