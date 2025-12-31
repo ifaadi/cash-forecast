@@ -61,12 +61,62 @@ export default function Dashboard() {
   // Update forecast when parameters change (debounced)
   useEffect(() => {
     if (companyId && forecastId && !updating) {
-      const timeoutId = setTimeout(() => {
-        updateForecastData()
+      const timeoutId = setTimeout(async () => {
+        try {
+          setUpdating(true)
+          const updatedForecast = await updateForecast(forecastId, {
+            revenue_confidence: revenueConfidence,
+            expense_buffer: expenseBuffer,
+            safety_threshold: safetyThreshold,
+            weeks: forecastWeeks,
+            start_date: startDate,
+          })
+
+          if (updatedForecast) {
+            const displayData = updatedForecast.forecast_weeks
+              .sort((a, b) => a.week_number - b.week_number)
+              .map(week => ({
+                week: `W${week.week_number} (${new Date(week.week_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`,
+                weekNumber: week.week_number,
+                inflow: week.inflow,
+                outflow: week.outflow,
+                net: week.net,
+                balance: week.balance,
+              }))
+
+            setForecastData(displayData)
+
+            // Calculate KPIs inline
+            const balances = displayData.map(f => f.balance)
+            const lowestCash = Math.min(...balances)
+            const lowestWeek = displayData.find(f => f.balance === lowestCash)?.weekNumber || 0
+            const negativeFlows = displayData.filter(f => f.net < 0)
+            const avgBurnRate = negativeFlows.length > 0
+              ? Math.abs(negativeFlows.reduce((sum, f) => sum + f.net, 0) / negativeFlows.length)
+              : 0
+
+            const finalBalance = displayData[displayData.length - 1]?.balance || 0
+
+            setKPIs({
+              lowestCash,
+              lowestWeek,
+              runway: avgBurnRate > 0 ? Math.floor(finalBalance / avgBurnRate) : 99,
+              burnRate: Math.round(avgBurnRate),
+              belowThreshold: displayData.filter(f => f.balance < safetyThreshold).length,
+              payrollRisk: displayData.filter((f, i) => i % 2 === 0 && f.balance < safetyThreshold * 2).length,
+              volatility: avgBurnRate > 600000 ? 'High' : avgBurnRate > 300000 ? 'Medium' : 'Low',
+              volatilityScore: Math.round(avgBurnRate),
+            })
+          }
+        } catch (error) {
+          console.error('Error updating forecast:', error)
+        } finally {
+          setUpdating(false)
+        }
       }, 500) // Debounce for better performance
       return () => clearTimeout(timeoutId)
     }
-  }, [companyId, forecastId, updating, updateForecastData])
+  }, [companyId, forecastId, updating, revenueConfidence, expenseBuffer, safetyThreshold, startDate, forecastWeeks])
 
   // Update mock data when sliders change (for users without company_id)
   useEffect(() => {
@@ -150,7 +200,8 @@ export default function Dashboard() {
     } finally {
       setLoading(false)
     }
-  }, [companyId, calculateKPIs])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyId])
 
   const updateForecastData = useCallback(async () => {
     if (!forecastId) return
@@ -185,7 +236,8 @@ export default function Dashboard() {
     } finally {
       setUpdating(false)
     }
-  }, [forecastId, revenueConfidence, expenseBuffer, safetyThreshold, forecastWeeks, startDate, calculateKPIs])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forecastId, revenueConfidence, expenseBuffer, safetyThreshold, forecastWeeks, startDate])
 
   const calculateKPIs = useCallback((data: any[]) => {
     const balances = data.map(f => f.balance)
