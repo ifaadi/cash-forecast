@@ -31,6 +31,7 @@ export const dynamic = 'force-dynamic'
 export default function Dashboard() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
+  const [companyId, setCompanyId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [forecastId, setForecastId] = useState<string | null>(null)
   const [forecastData, setForecastData] = useState<any[]>([])
@@ -52,14 +53,14 @@ export default function Dashboard() {
 
   // Load initial forecast
   useEffect(() => {
-    if (user) {
+    if (user && companyId) {
       loadInitialForecast()
     }
-  }, [user])
+  }, [user, companyId])
 
   // Update forecast when parameters change (debounced)
   useEffect(() => {
-    if (user && forecastId && !updating) {
+    if (companyId && forecastId && !updating) {
       const timeoutId = setTimeout(() => {
         updateForecastData()
       }, 500) // Debounce for better performance
@@ -74,13 +75,27 @@ export default function Dashboard() {
       return
     }
     setUser(user)
+
+    // Fetch company_id from user_profiles
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.company_id) {
+      setCompanyId(profile.company_id)
+    }
+
     setLoading(false)
   }
 
   const loadInitialForecast = useCallback(async () => {
+    if (!companyId) return
+
     try {
       setLoading(true)
-      const forecast = await getOrCreateActiveForecast(user.id)
+      const forecast = await getOrCreateActiveForecast(companyId)
 
       if (forecast) {
         setForecastId(forecast.id)
@@ -113,7 +128,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false)
     }
-  }, [user])
+  }, [companyId])
 
   const updateForecastData = useCallback(async () => {
     if (!forecastId) return

@@ -12,7 +12,7 @@ export interface ForecastWeek {
 
 export interface Forecast {
   id: string
-  user_id: string
+  company_id: string
   name: string
   start_date: string
   weeks: number
@@ -72,8 +72,8 @@ export function generateForecastWeeks(
   return forecast
 }
 
-// Get active forecast for user or create default
-export async function getOrCreateActiveForecast(userId: string): Promise<ForecastWithWeeks | null> {
+// Get active forecast for company or create default
+export async function getOrCreateActiveForecast(companyId: string): Promise<ForecastWithWeeks | null> {
   try {
     // Try to get active forecast
     const { data: existingForecast, error: fetchError } = await supabase
@@ -82,7 +82,7 @@ export async function getOrCreateActiveForecast(userId: string): Promise<Forecas
         *,
         forecast_weeks (*)
       `)
-      .eq('user_id', userId)
+      .eq('company_id', companyId)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -95,7 +95,7 @@ export async function getOrCreateActiveForecast(userId: string): Promise<Forecas
     // Create default forecast if none exists
     const today = new Date().toISOString().split('T')[0]
     const newForecast = {
-      user_id: userId,
+      company_id: companyId,
       name: 'Default Forecast',
       start_date: today,
       weeks: 13,
@@ -214,7 +214,7 @@ export async function updateForecast(
 
 // Save scenario
 export async function saveScenario(
-  userId: string,
+  companyId: string,
   forecastId: string,
   name: string,
   description: string,
@@ -224,7 +224,7 @@ export async function saveScenario(
   return await supabase
     .from('scenarios')
     .insert([{
-      user_id: userId,
+      company_id: companyId,
       forecast_id: forecastId,
       name,
       description,
@@ -235,11 +235,11 @@ export async function saveScenario(
     .single()
 }
 
-// Get all scenarios for user
-export async function getUserScenarios(userId: string) {
+// Get all scenarios for company
+export async function getCompanyScenarios(companyId: string) {
   return await supabase
     .from('scenarios')
     .select('*')
-    .eq('user_id', userId)
+    .eq('company_id', companyId)
     .order('created_at', { ascending: false })
 }
