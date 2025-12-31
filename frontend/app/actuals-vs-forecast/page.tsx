@@ -404,50 +404,112 @@ export default function ActualsVsForecastPage() {
           </CardContent>
         </Card>
 
-        {/* Insights */}
+        {/* Insights - Traffic Light Format */}
         {comparisonData.length > 0 && (
           <Card className="mt-6">
             <CardHeader>
               <CardTitle>Key Insights</CardTitle>
+              <CardDescription>Auto-generated analysis based on forecast vs actual performance</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {accuracyScore >= 90 && (
-                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                    <p className="text-sm font-semibold text-green-900">Excellent Forecasting</p>
-                    <p className="text-sm text-green-700">
-                      Your forecasts are highly accurate with an average variance of just {avgVariancePct.toFixed(1)}%.
-                      Continue using the same forecasting methodology.
+                {/* Forecast Source Info */}
+                <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
+                  <p className="text-sm font-semibold text-blue-900 mb-2">📊 Understanding Your Forecast Data</p>
+                  <p className="text-sm text-blue-800">
+                    <strong>Forecast:</strong> Generated from Dashboard sliders (Revenue Confidence & Expense Buffer). These create weekly projections saved to the database.
+                    <br />
+                    <strong>Actual:</strong> Real transactions from the Transactions page, summed by week. Add transactions to see accurate comparisons.
+                  </p>
+                </div>
+
+                {/* Green Light - Good Performance */}
+                {accuracyScore >= 80 && (
+                  <div className="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-4 h-4 rounded-full bg-green-500"></div>
+                      <p className="text-sm font-semibold text-green-900">Strong Forecast Accuracy</p>
+                    </div>
+                    <p className="text-sm text-green-800">
+                      Accuracy: {accuracyScore.toFixed(0)}% | Avg Variance: {avgVariancePct.toFixed(1)}%
+                      <br />
+                      Your forecasting methodology is working well. Continue using current Revenue Confidence and Expense Buffer settings.
                     </p>
                   </div>
                 )}
 
-                {accuracyScore >= 70 && accuracyScore < 90 && (
-                  <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                    <p className="text-sm font-semibold text-yellow-900">Good Forecasting</p>
-                    <p className="text-sm text-yellow-700">
-                      Your forecasts show good accuracy at {accuracyScore.toFixed(0)}%. Review weeks with larger variances
-                      to identify patterns and improve accuracy.
+                {/* Yellow Light - Warning */}
+                {accuracyScore >= 50 && accuracyScore < 80 && (
+                  <div className="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-500">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-4 h-4 rounded-full bg-yellow-500"></div>
+                      <p className="text-sm font-semibold text-yellow-900">Moderate Forecast Accuracy</p>
+                    </div>
+                    <p className="text-sm text-yellow-800">
+                      Accuracy: {accuracyScore.toFixed(0)}% | Avg Variance: {avgVariancePct.toFixed(1)}%
+                      <br />
+                      <strong>Action Required:</strong> Review largest variance weeks below and adjust Dashboard sliders. Consider historical patterns from past 3-6 months.
                     </p>
                   </div>
                 )}
 
-                {accuracyScore < 70 && (
-                  <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                    <p className="text-sm font-semibold text-red-900">Forecasting Needs Improvement</p>
-                    <p className="text-sm text-red-700">
-                      Your forecasts show significant variance ({avgVariancePct.toFixed(1)}% on average). Consider reviewing
-                      your assumptions and incorporating historical transaction data for better accuracy.
+                {/* Red Light - Critical */}
+                {accuracyScore < 50 && (
+                  <div className="bg-red-50 p-4 rounded-lg border-l-4 border-red-500">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-4 h-4 rounded-full bg-red-500"></div>
+                      <p className="text-sm font-semibold text-red-900">Forecast Needs Immediate Attention</p>
+                    </div>
+                    <p className="text-sm text-red-800">
+                      Accuracy: {accuracyScore.toFixed(0)}% | Avg Variance: {avgVariancePct.toFixed(1)}%
+                      <br />
+                      <strong>Critical Actions:</strong>
+                      1) Add more transactions for accurate actuals
+                      2) Adjust Revenue Confidence (currently {revenueConfidence}%) & Expense Buffer on Dashboard
+                      3) Review cash flow timing assumptions
                     </p>
                   </div>
                 )}
 
-                {comparisonData.filter(d => Math.abs(d.variancePct) > 20).length > 0 && (
-                  <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                    <p className="text-sm font-semibold text-orange-900">High Variance Weeks Detected</p>
-                    <p className="text-sm text-orange-700">
-                      {comparisonData.filter(d => Math.abs(d.variancePct) > 20).length} weeks show variance greater than 20%.
-                      Investigate these periods to understand unexpected cash flows.
+                {/* High Variance Detection - Red Light */}
+                {comparisonData.filter(d => Math.abs(d.variancePct) > 50).length > 0 && (
+                  <div className="bg-red-50 p-4 rounded-lg border-l-4 border-red-500">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-4 h-4 rounded-full bg-red-500"></div>
+                      <p className="text-sm font-semibold text-red-900">Extreme Variance Detected</p>
+                    </div>
+                    <p className="text-sm text-red-800">
+                      {comparisonData.filter(d => Math.abs(d.variancePct) > 50).length} weeks exceed 50% variance.
+                      These weeks indicate unexpected cash events or incorrect forecast assumptions. Review weekly breakdown below.
+                    </p>
+                  </div>
+                )}
+
+                {/* Missing Actuals Warning - Yellow Light */}
+                {comparisonData.filter(d => d.actual === 0).length > comparisonData.length * 0.5 && (
+                  <div className="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-500">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-4 h-4 rounded-full bg-yellow-500"></div>
+                      <p className="text-sm font-semibold text-yellow-900">Limited Transaction Data</p>
+                    </div>
+                    <p className="text-sm text-yellow-800">
+                      {comparisonData.filter(d => d.actual === 0).length} of {comparisonData.length} weeks have $0 in actuals.
+                      <br />
+                      <strong>Action:</strong> Go to Transactions page and add real inflows/outflows to improve forecast accuracy.
+                    </p>
+                  </div>
+                )}
+
+                {/* Good Weeks - Green Light */}
+                {comparisonData.filter(d => Math.abs(d.variancePct) <= 20 && d.actual !== 0).length > 3 && (
+                  <div className="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-4 h-4 rounded-full bg-green-500"></div>
+                      <p className="text-sm font-semibold text-green-900">High-Accuracy Weeks Identified</p>
+                    </div>
+                    <p className="text-sm text-green-800">
+                      {comparisonData.filter(d => Math.abs(d.variancePct) <= 20 && d.actual !== 0).length} weeks achieved ±20% variance accuracy.
+                      Study these periods to understand what forecasting assumptions worked best.
                     </p>
                   </div>
                 )}
@@ -455,109 +517,6 @@ export default function ActualsVsForecastPage() {
             </CardContent>
           </Card>
         )}
-
-        {/* Action Buttons */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-          {/* Revenue Actions */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center text-green-700">
-                <span className="mr-2">💰</span> Revenue Actions
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button
-                onClick={() => router.push('/transactions?filter=Inflow')}
-                className="w-full justify-start bg-green-600 hover:bg-green-700"
-                size="sm"
-              >
-                Review Receivables →
-              </Button>
-              <Button
-                onClick={() => router.push('/chat?question=How+to+accelerate+cash')}
-                className="w-full justify-start bg-green-600 hover:bg-green-700"
-                size="sm"
-              >
-                Ask: "How to accelerate cash?" →
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Cost Actions */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center text-orange-700">
-                <span className="mr-2">📉</span> Cost Actions
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button
-                onClick={() => router.push('/analytics')}
-                className="w-full justify-start bg-orange-600 hover:bg-orange-700"
-                size="sm"
-              >
-                View Top Expenses →
-              </Button>
-              <Button
-                onClick={() => router.push('/transactions?filter=Outflow')}
-                className="w-full justify-start bg-orange-600 hover:bg-orange-700"
-                size="sm"
-              >
-                Cut Non-Essentials →
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Get Help */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center text-blue-700">
-                <span className="mr-2">📞</span> Get Help
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button
-                onClick={() => router.push('/chat')}
-                className="w-full justify-start bg-blue-600 hover:bg-blue-700"
-                size="sm"
-              >
-                Talk to AI CFO →
-              </Button>
-              <Button
-                onClick={() => window.open('mailto:cfo@wphome.com?subject=Forecast Accuracy Review', '_blank')}
-                className="w-full justify-start bg-blue-600 hover:bg-blue-700"
-                size="sm"
-              >
-                Contact Financial Advisor →
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Forecast Tools */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center text-purple-700">
-                <span className="mr-2">🔮</span> Forecast Tools
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button
-                onClick={() => router.push('/dashboard')}
-                className="w-full justify-start bg-purple-600 hover:bg-purple-700"
-                size="sm"
-              >
-                Run Scenarios →
-              </Button>
-              <Button
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                className="w-full justify-start bg-purple-600 hover:bg-purple-700"
-                size="sm"
-              >
-                Check Forecast Accuracy →
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </div>
   )
