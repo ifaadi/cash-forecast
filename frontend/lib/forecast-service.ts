@@ -19,6 +19,7 @@ export interface Forecast {
   starting_balance: number
   revenue_confidence: number
   expense_buffer: number
+  safety_threshold: number
   created_at: string
   updated_at: string
   is_active: boolean
@@ -102,6 +103,7 @@ export async function getOrCreateActiveForecast(companyId: string): Promise<Fore
       starting_balance: 5000000,
       revenue_confidence: 100,
       expense_buffer: 100,
+      safety_threshold: 1000000, // Default $1M safety threshold
       is_active: true,
     }
 
@@ -156,6 +158,7 @@ export async function updateForecast(
   params: {
     revenue_confidence?: number
     expense_buffer?: number
+    safety_threshold?: number
     weeks?: number
     start_date?: string
   }
