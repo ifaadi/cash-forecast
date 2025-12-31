@@ -462,11 +462,9 @@ export default function TransactionsPage() {
                   Export CSV
                 </Button>
                 <label className="cursor-pointer">
-                  <Button variant="outline" size="sm" asChild className="bg-green-50 hover:bg-green-100">
-                    <span>
-                      <FileSpreadsheet className="h-4 w-4 mr-2" />
-                      Import Excel
-                    </span>
+                  <Button variant="outline" size="sm" className="bg-green-50 hover:bg-green-100">
+                    <FileSpreadsheet className="h-4 w-4 mr-2" />
+                    Import Excel
                   </Button>
                   <input
                     type="file"
@@ -476,11 +474,9 @@ export default function TransactionsPage() {
                   />
                 </label>
                 <label className="cursor-pointer">
-                  <Button variant="outline" size="sm" asChild>
-                    <span>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Import CSV
-                    </span>
+                  <Button variant="outline" size="sm">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import CSV
                   </Button>
                   <input
                     type="file"
