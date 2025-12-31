@@ -7,7 +7,8 @@ import { formatCurrency } from '@/lib/utils'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Trash2, Pencil, Plus, Download, Upload, ArrowLeft } from 'lucide-react'
+import { Trash2, Pencil, Plus, Download, Upload, ArrowLeft, FileSpreadsheet } from 'lucide-react'
+import * as XLSX from 'xlsx'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -251,6 +252,34 @@ export default function TransactionsPage() {
     a.click()
   }
 
+  const exportExcel = () => {
+    const data = filteredTransactions.map(t => ({
+      Date: t.transaction_date,
+      Category: t.category,
+      Type: t.type,
+      Amount: t.amount,
+      Description: t.description || '',
+      Recurring: t.is_recurring ? 'Yes' : 'No',
+    }))
+
+    const worksheet = XLSX.utils.json_to_sheet(data)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Transactions')
+
+    // Auto-size columns
+    const maxWidth = data.reduce((w, r) => Math.max(w, r.Description?.length || 0), 10)
+    worksheet['!cols'] = [
+      { wch: 12 }, // Date
+      { wch: 20 }, // Category
+      { wch: 10 }, // Type
+      { wch: 12 }, // Amount
+      { wch: Math.min(maxWidth, 50) }, // Description
+      { wch: 10 }, // Recurring
+    ]
+
+    XLSX.writeFile(workbook, `transactions-${new Date().toISOString().split('T')[0]}.xlsx`)
+  }
+
   const handleCSVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -285,6 +314,46 @@ export default function TransactionsPage() {
     }
   }
 
+  const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = async (event) => {
+      try {
+        const data = event.target?.result
+        const workbook = XLSX.read(data, { type: 'binary' })
+        const sheetName = workbook.SheetNames[0]
+        const worksheet = workbook.Sheets[sheetName]
+        const jsonData = XLSX.utils.sheet_to_json(worksheet)
+
+        const newTransactions = jsonData.map((row: any) => ({
+          company_id: companyId,
+          transaction_date: row.Date || row.date,
+          category: row.Category || row.category,
+          type: (row.Type || row.type) as 'Inflow' | 'Outflow',
+          amount: parseFloat(row.Amount || row.amount),
+          description: row.Description || row.description || null,
+          is_recurring: (row.Recurring || row.recurring)?.toString().toLowerCase() === 'yes',
+        }))
+
+        const { error } = await supabase
+          .from('transactions')
+          .insert(newTransactions)
+
+        if (error) {
+          alert('Error uploading Excel: ' + error.message)
+        } else {
+          alert(`Successfully uploaded ${newTransactions.length} transactions`)
+          await loadTransactions()
+        }
+      } catch (error) {
+        alert('Error reading Excel file: ' + (error as Error).message)
+      }
+    }
+    reader.readAsBinaryString(file)
+  }
+
   const totalInflows = filteredTransactions
     .filter(t => t.type === 'Inflow')
     .reduce((sum, t) => sum + t.amount, 0)
@@ -310,7 +379,7 @@ export default function TransactionsPage() {
               <p className="text-sm text-gray-600">{user?.email}</p>
             </div>
           </div>
-          <nav className="flex gap-4 border-t pt-4 mt-4">
+          <nav className="flex gap-4 border-t pt-4 mt-4 flex-wrap">
             <Button onClick={() => router.push('/dashboard')} variant="outline" size="sm">
               Dashboard
             </Button>
@@ -319,6 +388,9 @@ export default function TransactionsPage() {
             </Button>
             <Button onClick={() => router.push('/actuals-vs-forecast')} variant="outline" size="sm">
               Actuals vs Forecast
+            </Button>
+            <Button onClick={() => router.push('/analytics')} variant="outline" size="sm">
+              Analytics
             </Button>
             <Button onClick={() => router.push('/chat')} variant="outline" size="sm">
               Ask CFO
@@ -376,15 +448,33 @@ export default function TransactionsPage() {
           <CardHeader>
             <div className="flex justify-between items-center">
               <CardTitle>Filters</CardTitle>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button onClick={() => setShowModal(true)} size="sm">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Transaction
+                </Button>
+                <Button onClick={exportExcel} variant="outline" size="sm" className="bg-green-50 hover:bg-green-100">
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Export Excel
                 </Button>
                 <Button onClick={exportCSV} variant="outline" size="sm">
                   <Download className="h-4 w-4 mr-2" />
                   Export CSV
                 </Button>
+                <label className="cursor-pointer">
+                  <Button variant="outline" size="sm" asChild className="bg-green-50 hover:bg-green-100">
+                    <span>
+                      <FileSpreadsheet className="h-4 w-4 mr-2" />
+                      Import Excel
+                    </span>
+                  </Button>
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={handleExcelUpload}
+                    className="hidden"
+                  />
+                </label>
                 <label className="cursor-pointer">
                   <Button variant="outline" size="sm" asChild>
                     <span>

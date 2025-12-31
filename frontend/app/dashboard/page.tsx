@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { formatCurrency } from '@/lib/utils'
-import { generateCFOInsights, type ForecastContext } from '@/lib/ai'
+import { generateCFOInsights, askCFO, type ForecastContext } from '@/lib/ai'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   LineChart,
   Line,
@@ -20,7 +21,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from 'recharts'
-import { Sparkles, Loader2 } from 'lucide-react'
+import { Sparkles, Loader2, AlertTriangle, Phone, DollarSign, TrendingDown, Zap } from 'lucide-react'
 
 // Force dynamic rendering (disable static generation)
 export const dynamic = 'force-dynamic'
@@ -37,6 +38,9 @@ export default function Dashboard() {
   const [forecastWeeks, setForecastWeeks] = useState(13)
   const [aiInsights, setAIInsights] = useState('')
   const [loadingAI, setLoadingAI] = useState(false)
+  const [showPanicMode, setShowPanicMode] = useState(false)
+  const [panicAnalysis, setPanicAnalysis] = useState('')
+  const [loadingPanic, setLoadingPanic] = useState(false)
 
   useEffect(() => {
     checkUser()
@@ -87,6 +91,40 @@ export default function Dashboard() {
     }
   }
 
+  const handlePanicMode = async () => {
+    setShowPanicMode(true)
+    setLoadingPanic(true)
+    try {
+      const context: ForecastContext = {
+        forecast: forecastData,
+        kpis: kpis,
+      }
+      const analysis = await askCFO(
+        `EMERGENCY ANALYSIS NEEDED: I need immediate help understanding my cash position. Current situation:
+        - Cash runway: ${kpis.runway} weeks
+        - Lowest cash point: ${formatCurrency(kpis.lowestCash)} at week ${kpis.lowestWeek}
+        - Weeks below threshold: ${kpis.belowThreshold}
+        - Volatility: ${kpis.volatility}
+
+        Please provide:
+        1. IMMEDIATE RISKS (next 2 weeks)
+        2. TOP 3 PRIORITY ACTIONS I must take today
+        3. What expenses to cut first
+        4. Revenue acceleration opportunities
+        5. Should I raise capital? If yes, how much and by when?
+
+        Be direct and actionable. I need clarity, not theory.`,
+        context
+      )
+      setPanicAnalysis(analysis)
+    } catch (error) {
+      console.error('Error generating panic analysis:', error)
+      setPanicAnalysis('Unable to generate emergency analysis. Please try again or contact support immediately.')
+    } finally {
+      setLoadingPanic(false)
+    }
+  }
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
@@ -101,9 +139,18 @@ export default function Dashboard() {
               <h1 className="text-2xl font-bold text-gray-900">💰 CFO Cash Command</h1>
               <p className="text-sm text-gray-600">{user?.email}</p>
             </div>
-            <Button onClick={handleLogout} variant="outline">
-              Logout
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                onClick={handlePanicMode}
+                className="bg-red-600 hover:bg-red-700 text-white font-bold animate-pulse"
+              >
+                <AlertTriangle className="h-5 w-5 mr-2" />
+                🚨 PANIC MODE
+              </Button>
+              <Button onClick={handleLogout} variant="outline">
+                Logout
+              </Button>
+            </div>
           </div>
           {/* Navigation */}
           <nav className="flex gap-4 border-t pt-4">
@@ -115,6 +162,9 @@ export default function Dashboard() {
             </Button>
             <Button onClick={() => router.push('/actuals-vs-forecast')} variant="outline" size="sm">
               Actuals vs Forecast
+            </Button>
+            <Button onClick={() => router.push('/analytics')} variant="outline" size="sm">
+              Analytics
             </Button>
             <Button onClick={() => router.push('/chat')} variant="outline" size="sm">
               Ask CFO
@@ -318,6 +368,204 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Panic Mode Modal */}
+      {showPanicMode && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-gradient-to-r from-red-600 to-red-700 p-6 text-white">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-3xl font-bold mb-2 flex items-center">
+                    <AlertTriangle className="h-8 w-8 mr-3 animate-pulse" />
+                    🚨 EMERGENCY CASH ANALYSIS
+                  </h2>
+                  <p className="text-red-100">AI-Powered Crisis Management</p>
+                </div>
+                <button
+                  onClick={() => setShowPanicMode(false)}
+                  className="text-white hover:text-red-200 text-2xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {loadingPanic ? (
+                <div className="text-center py-12">
+                  <Loader2 className="h-16 w-16 animate-spin mx-auto text-red-600 mb-4" />
+                  <p className="text-xl font-semibold text-gray-900">Analyzing your situation...</p>
+                  <p className="text-gray-600 mt-2">Generating emergency recommendations</p>
+                </div>
+              ) : panicAnalysis ? (
+                <>
+                  {/* AI Analysis */}
+                  <div className="bg-red-50 border-2 border-red-200 rounded-lg p-6 mb-6">
+                    <h3 className="text-xl font-bold text-red-900 mb-4 flex items-center">
+                      <Zap className="h-5 w-5 mr-2" />
+                      Emergency Action Plan
+                    </h3>
+                    <div className="prose prose-sm max-w-none">
+                      <pre className="whitespace-pre-wrap font-sans text-sm text-gray-800 bg-white p-4 rounded border">
+                        {panicAnalysis}
+                      </pre>
+                    </div>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center text-green-700">
+                          <DollarSign className="h-5 w-5 mr-2" />
+                          Revenue Actions
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <Button
+                          onClick={() => router.push('/transactions')}
+                          className="w-full justify-start bg-green-600 hover:bg-green-700"
+                          size="sm"
+                        >
+                          Review Receivables →
+                        </Button>
+                        <Button
+                          onClick={() => router.push('/chat')}
+                          className="w-full justify-start bg-green-600 hover:bg-green-700"
+                          size="sm"
+                        >
+                          Ask: "How to accelerate cash?" →
+                        </Button>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center text-orange-700">
+                          <TrendingDown className="h-5 w-5 mr-2" />
+                          Cost Actions
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <Button
+                          onClick={() => router.push('/analytics')}
+                          className="w-full justify-start bg-orange-600 hover:bg-orange-700"
+                          size="sm"
+                        >
+                          View Top Expenses →
+                        </Button>
+                        <Button
+                          onClick={() => router.push('/transactions')}
+                          className="w-full justify-start bg-orange-600 hover:bg-orange-700"
+                          size="sm"
+                        >
+                          Cut Non-Essentials →
+                        </Button>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center text-blue-700">
+                          <Phone className="h-5 w-5 mr-2" />
+                          Get Help
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <Button
+                          onClick={() => router.push('/chat')}
+                          className="w-full justify-start bg-blue-600 hover:bg-blue-700"
+                          size="sm"
+                        >
+                          Talk to AI CFO →
+                        </Button>
+                        <Button
+                          onClick={() => window.open('mailto:support@yourcompany.com?subject=Emergency Cash Situation', '_blank')}
+                          className="w-full justify-start bg-blue-600 hover:bg-blue-700"
+                          size="sm"
+                        >
+                          Contact Financial Advisor →
+                        </Button>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center text-purple-700">
+                          <Sparkles className="h-5 w-5 mr-2" />
+                          Forecast Tools
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <Button
+                          onClick={() => { setShowPanicMode(false); router.push('/dashboard'); }}
+                          className="w-full justify-start bg-purple-600 hover:bg-purple-700"
+                          size="sm"
+                        >
+                          Run Scenarios →
+                        </Button>
+                        <Button
+                          onClick={() => router.push('/actuals-vs-forecast')}
+                          className="w-full justify-start bg-purple-600 hover:bg-purple-700"
+                          size="sm"
+                        >
+                          Check Forecast Accuracy →
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Current Snapshot */}
+                  <div className="bg-gray-50 rounded-lg p-4 border">
+                    <h4 className="font-semibold text-gray-900 mb-3">Current Cash Position Snapshot</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <p className="text-gray-600">Runway</p>
+                        <p className="text-xl font-bold text-gray-900">{kpis.runway} weeks</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600">Lowest Cash</p>
+                        <p className="text-xl font-bold text-gray-900">{formatCurrency(kpis.lowestCash)}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600">Burn Rate</p>
+                        <p className="text-xl font-bold text-gray-900">{formatCurrency(kpis.burnRate)}/wk</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600">Risk Weeks</p>
+                        <p className="text-xl font-bold text-red-600">{kpis.belowThreshold}</p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-12">
+                  <AlertTriangle className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                  <p className="text-gray-600">Click the button above to generate emergency analysis</p>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-gray-50 px-6 py-4 flex justify-between items-center border-t">
+              <p className="text-sm text-gray-600">
+                💡 Tip: This analysis is based on your current forecast data
+              </p>
+              <div className="flex gap-2">
+                <Button onClick={() => setShowPanicMode(false)} variant="outline">
+                  Close
+                </Button>
+                {panicAnalysis && (
+                  <Button onClick={handlePanicMode} variant="outline">
+                    <Loader2 className="h-4 w-4 mr-2" />
+                    Refresh Analysis
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
