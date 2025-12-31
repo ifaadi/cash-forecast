@@ -22,6 +22,7 @@ import {
   ReferenceLine,
 } from 'recharts'
 import { Sparkles, Loader2, AlertTriangle, Phone, DollarSign, TrendingDown, Zap } from 'lucide-react'
+import { WaterfallChart } from '@/components/waterfall-chart'
 
 // Force dynamic rendering (disable static generation)
 export const dynamic = 'force-dynamic'
@@ -232,55 +233,70 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* KPI Cards */}
+        {/* KPI Cards - Modern Design */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-          <Card>
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <CardHeader className="pb-2">
-              <CardDescription>Lowest Cash Point</CardDescription>
+              <div className="flex items-center justify-between">
+                <CardDescription className="text-blue-700 font-medium">Lowest Cash Point</CardDescription>
+                <TrendingDown className="h-5 w-5 text-blue-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(kpis.lowestCash || 0)}</div>
-              <p className="text-xs text-muted-foreground">Week {kpis.lowestWeek || 0}</p>
+              <div className="text-2xl font-bold text-blue-900">{formatCurrency(kpis.lowestCash || 0)}</div>
+              <p className="text-sm text-blue-600 mt-1">Week {kpis.lowestWeek || 0}</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
             <CardHeader className="pb-2">
-              <CardDescription>Weeks of Runway</CardDescription>
+              <div className="flex items-center justify-between">
+                <CardDescription className="text-green-700 font-medium">Weeks of Runway</CardDescription>
+                <Zap className="h-5 w-5 text-green-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{kpis.runway || 0} weeks</div>
-              <p className="text-xs text-muted-foreground">Burn: {formatCurrency(kpis.burnRate || 0)}/wk</p>
+              <div className="text-2xl font-bold text-green-900">{kpis.runway || 0} weeks</div>
+              <p className="text-sm text-green-600 mt-1">Burn: {formatCurrency(kpis.burnRate || 0)}/wk</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
             <CardHeader className="pb-2">
-              <CardDescription>Weeks Below Threshold</CardDescription>
+              <div className="flex items-center justify-between">
+                <CardDescription className="text-orange-700 font-medium">Weeks Below Threshold</CardDescription>
+                <AlertTriangle className="h-5 w-5 text-orange-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{kpis.belowThreshold || 0}</div>
-              <p className="text-xs text-muted-foreground">weeks at risk</p>
+              <div className="text-2xl font-bold text-orange-900">{kpis.belowThreshold || 0}</div>
+              <p className="text-sm text-orange-600 mt-1">weeks at risk</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
             <CardHeader className="pb-2">
-              <CardDescription>Payroll Risk</CardDescription>
+              <div className="flex items-center justify-between">
+                <CardDescription className="text-red-700 font-medium">Payroll Risk</CardDescription>
+                <Phone className="h-5 w-5 text-red-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">{kpis.payrollRisk || 0}</div>
-              <p className="text-xs text-muted-foreground">high-risk periods</p>
+              <div className="text-2xl font-bold text-red-900">{kpis.payrollRisk || 0}</div>
+              <p className="text-sm text-red-600 mt-1">high-risk periods</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
             <CardHeader className="pb-2">
-              <CardDescription>Volatility</CardDescription>
+              <div className="flex items-center justify-between">
+                <CardDescription className="text-purple-700 font-medium">Volatility</CardDescription>
+                <DollarSign className="h-5 w-5 text-purple-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{kpis.volatility || 'Low'}</div>
-              <p className="text-xs text-muted-foreground">σ={formatCurrency(kpis.volatilityScore || 0)}</p>
+              <div className="text-2xl font-bold text-purple-900">{kpis.volatility || 'Low'}</div>
+              <p className="text-sm text-purple-600 mt-1">σ={formatCurrency(kpis.volatilityScore || 0)}</p>
             </CardContent>
           </Card>
         </div>
@@ -300,8 +316,8 @@ export default function Dashboard() {
                   <YAxis label={{ value: 'Cash Balance ($)', angle: -90, position: 'insideLeft' }} />
                   <Tooltip formatter={(value: any) => formatCurrency(value)} />
                   <Legend />
-                  <ReferenceLine y={50000} stroke="red" strokeDasharray="3 3" label="Safety" />
-                  <Line type="monotone" dataKey="balance" stroke="#3b82f6" strokeWidth={3} name="Cash Balance" />
+                  <ReferenceLine y={1000000} stroke="#ef4444" strokeDasharray="3 3" label="Safety Threshold" />
+                  <Line type="monotone" dataKey="balance" stroke="#6366f1" strokeWidth={3} name="Cash Balance" dot={{ fill: '#6366f1', r: 4 }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
@@ -328,13 +344,50 @@ export default function Dashboard() {
           </Card>
         </div>
 
+        {/* Waterfall Chart */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Cash Flow Waterfall Analysis</CardTitle>
+            <CardDescription>Visual breakdown of cash movements and final position</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <WaterfallChart
+              data={[
+                {
+                  name: 'Starting Cash',
+                  value: 5000000,
+                  total: 5000000,
+                  isTotal: true,
+                },
+                {
+                  name: 'Total Inflows',
+                  value: forecastData.reduce((sum, f) => sum + f.inflow, 0),
+                  total: 5000000 + forecastData.reduce((sum, f) => sum + f.inflow, 0),
+                },
+                {
+                  name: 'Total Outflows',
+                  value: -forecastData.reduce((sum, f) => sum + f.outflow, 0),
+                  total: 5000000 + forecastData.reduce((sum, f) => sum + f.inflow, 0) - forecastData.reduce((sum, f) => sum + f.outflow, 0),
+                },
+                {
+                  name: 'Ending Cash',
+                  value: forecastData[forecastData.length - 1]?.balance || 0,
+                  total: forecastData[forecastData.length - 1]?.balance || 0,
+                  isTotal: true,
+                },
+              ]}
+              height={350}
+            />
+          </CardContent>
+        </Card>
+
         {/* AI Insights */}
         <Card>
           <CardHeader>
             <div className="flex justify-between items-center">
               <div>
                 <CardTitle>AI CFO Insights</CardTitle>
-                <CardDescription>Powered by Google Gemini AI</CardDescription>
+                <CardDescription>Powered by Groq AI (Llama 3.1 70B)</CardDescription>
               </div>
               <Button onClick={generateInsights} disabled={loadingAI} size="sm">
                 {loadingAI ? (
@@ -573,14 +626,17 @@ export default function Dashboard() {
 // Mock data generator
 function generateMockForecast(revConf: number, expBuf: number, weeks: number, startDateStr: string) {
   const forecast = []
-  let balance = 250000
-  const safetyThreshold = 50000
+  let balance = 5000000 // Starting balance: $5M
+  const safetyThreshold = 1000000 // Safety threshold: $1M
   const startDate = new Date(startDateStr)
 
   for (let week = 1; week <= weeks; week++) {
-    const baseInflow = 45000 + (Math.random() * 5000 - 2500)
-    const baseOutflow = week % 2 === 0 ? 50000 : 20000
-    const additionalExpense = week % 4 === 0 ? 15000 : 0 // Rent every 4 weeks
+    // Base inflow: ~$900K per week with variation
+    const baseInflow = 900000 + (Math.random() * 100000 - 50000)
+    // Base outflow: $1M (even weeks) or $400K (odd weeks)
+    const baseOutflow = week % 2 === 0 ? 1000000 : 400000
+    // Additional large expense every 4 weeks: $300K
+    const additionalExpense = week % 4 === 0 ? 300000 : 0
 
     const inflow = baseInflow * (revConf / 100)
     const outflow = (baseOutflow + additionalExpense) * (expBuf / 100)
@@ -618,8 +674,8 @@ function generateMockForecast(revConf: number, expBuf: number, weeks: number, st
       runway: avgBurnRate > 0 ? Math.floor(balance / avgBurnRate) : 99,
       burnRate: Math.round(avgBurnRate),
       belowThreshold: forecast.filter(f => f.balance < safetyThreshold).length,
-      payrollRisk: forecast.filter((f, i) => i % 2 === 0 && f.balance < 100000).length,
-      volatility: avgBurnRate > 30000 ? 'High' : avgBurnRate > 15000 ? 'Medium' : 'Low',
+      payrollRisk: forecast.filter((f, i) => i % 2 === 0 && f.balance < 2000000).length,
+      volatility: avgBurnRate > 600000 ? 'High' : avgBurnRate > 300000 ? 'Medium' : 'Low',
       volatilityScore: Math.round(avgBurnRate),
     },
   }

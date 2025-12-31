@@ -7,8 +7,9 @@ import { formatCurrency } from '@/lib/utils'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Trash2, Pencil, Plus, Download, Upload, ArrowLeft, FileSpreadsheet } from 'lucide-react'
+import { Trash2, Pencil, Plus, Download, Upload, ArrowLeft, FileSpreadsheet, FileDown } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import { downloadTemplate } from '@/lib/excel-template'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -452,6 +453,10 @@ export default function TransactionsPage() {
                 <Button onClick={() => setShowModal(true)} size="sm">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Transaction
+                </Button>
+                <Button onClick={downloadTemplate} variant="outline" size="sm" className="bg-blue-50 hover:bg-blue-100 border-blue-300">
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Download Template
                 </Button>
                 <Button onClick={exportExcel} variant="outline" size="sm" className="bg-green-50 hover:bg-green-100">
                   <FileSpreadsheet className="h-4 w-4 mr-2" />
