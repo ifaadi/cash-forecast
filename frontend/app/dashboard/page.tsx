@@ -489,30 +489,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <WaterfallChart
-              data={[
-                {
-                  name: 'Starting Cash',
-                  value: 5000000,
-                  total: 5000000,
-                  isTotal: true,
-                },
-                {
-                  name: 'Total Inflows',
-                  value: forecastData.reduce((sum, f) => sum + f.inflow, 0),
-                  total: 5000000 + forecastData.reduce((sum, f) => sum + f.inflow, 0),
-                },
-                {
-                  name: 'Total Outflows',
-                  value: -forecastData.reduce((sum, f) => sum + f.outflow, 0),
-                  total: 5000000 + forecastData.reduce((sum, f) => sum + f.inflow, 0) - forecastData.reduce((sum, f) => sum + f.outflow, 0),
-                },
-                {
-                  name: 'Ending Cash',
-                  value: forecastData[forecastData.length - 1]?.balance || 0,
-                  total: forecastData[forecastData.length - 1]?.balance || 0,
-                  isTotal: true,
-                },
-              ]}
+              data={waterfallData}
               height={350}
             />
           </CardContent>
