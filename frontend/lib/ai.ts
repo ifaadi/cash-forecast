@@ -19,6 +19,7 @@ export interface ForecastContext {
     volatility: string
     volatilityScore: number
   }
+  safetyThreshold?: number
   anomalies?: Array<{
     category: string
     amount: number
@@ -54,34 +55,24 @@ export async function generateCFOInsights(context: ForecastContext): Promise<str
   try {
     const contextText = buildFinancialContext(context)
 
-    const prompt = `You are a seasoned CFO analyzing a cash forecast.
-
-CRITICAL RULES:
-1. Use ONLY the data provided below
-2. If data is missing, explicitly state what's missing
-3. Do NOT fabricate numbers, dates, or facts
-4. Focus on actionable operational advice
+    const prompt = `You are a CFO providing actionable cash flow analysis. Be direct and specific.
 
 FINANCIAL DATA:
 ${contextText}
 
-Provide a concise CFO Executive Summary with:
+Provide a brief executive summary answering these 5 questions:
 
-**Liquidity Status** (2-3 bullets)
-- Identify the critical cash point and timing
-- Flag any threshold breaches
-- Assess overall liquidity health
+1. **IMMEDIATE RISKS (next 2 weeks)**: What specific cash flow risks exist? Include dollar amounts and timing.
 
-**Key Risks** (2-3 bullets)
-- Highlight timing-specific risks (which weeks are most dangerous and why)
-- Note any payroll or operational risks
-- Call out anomalies if significant
+2. **TOP 3 PRIORITY ACTIONS**: Give 3 concrete actions with deadlines (e.g., "Accelerate AR collection by $X by [date]")
 
-**Recommended Actions** (1-2 bullets)
-- Provide specific, operationally realistic recommendations
-- Focus on timing and priorities
+3. **What expenses to cut first**: Suggest specific categories and estimated savings based on the outflow patterns.
 
-Keep it executive-ready: clear, concise, and action-oriented.`
+4. **Revenue acceleration opportunities**: Provide tangible ideas based on the cash flow patterns shown.
+
+5. **Should I raise capital? If yes, how much and by when?**: Give a clear yes/no with specific reasoning based on runway and burn rate.
+
+Be specific with numbers, dates, and actions. Don't say "need more data" - provide your best CFO judgment based on what's available.`
 
     return await callGroq(prompt)
   } catch (error: any) {
@@ -116,35 +107,35 @@ Provide a clear, concise answer based ONLY on the data above. If you cannot answ
 }
 
 function buildFinancialContext(context: ForecastContext): string {
-  const { forecast, kpis, anomalies } = context
+  const { forecast, kpis, anomalies, safetyThreshold = 1000000 } = context
 
-  let text = `=== CASH FORECAST SUMMARY (13 WEEKS) ===\n\n`
+  let text = `=== CASH FORECAST (${forecast.length} WEEKS) ===\n\n`
 
-  text += `WEEKLY CASH POSITION:\n`
+  text += `WEEKLY CASH FLOW:\n`
   forecast.forEach((week) => {
     const flags = []
-    if (week.week === kpis.lowestWeek) flags.push('LOWEST CASH POINT')
-    if (week.balance < 50000) flags.push('BELOW SAFETY THRESHOLD')
+    if (week.week === kpis.lowestWeek) flags.push('⚠️ CRITICAL')
+    if (week.balance < safetyThreshold) flags.push('🔴 BELOW THRESHOLD')
+    if (week.net < 0) flags.push('📉 BURN')
 
-    const flagStr = flags.length > 0 ? ` ⚠️ ${flags.join(', ')}` : ''
-    text += `Week ${week.week}: Net $${week.net.toLocaleString()} | Ending Cash $${week.balance.toLocaleString()}${flagStr}\n`
+    const flagStr = flags.length > 0 ? ` ${flags.join(' ')}` : ''
+    text += `Week ${week.week}: Inflow $${(week.inflow / 1000).toFixed(0)}K | Outflow $${(week.outflow / 1000).toFixed(0)}K | Net $${(week.net / 1000).toFixed(0)}K | Balance $${(week.balance / 1000000).toFixed(1)}M${flagStr}\n`
   })
 
-  text += `\n=== KEY PERFORMANCE INDICATORS ===\n`
-  text += `Lowest Cash Point: Week ${kpis.lowestWeek} at $${kpis.lowestCash.toLocaleString()}\n`
-  text += `Weeks of Runway: ${kpis.runway.toFixed(1)} weeks\n`
-  text += `Weeks Below Threshold: ${kpis.belowThreshold} weeks\n`
-  text += `Payroll Risk Weeks: ${kpis.payrollRisk} weeks\n`
-  text += `Cash Flow Volatility: ${kpis.volatility} (σ=$${kpis.volatilityScore.toLocaleString()})\n`
-  text += `Average Burn Rate: $${kpis.burnRate.toLocaleString()}/week\n`
+  text += `\n=== KEY METRICS ===\n`
+  text += `• Safety Threshold: $${(safetyThreshold / 1000000).toFixed(1)}M\n`
+  text += `• Lowest Cash: Week ${kpis.lowestWeek} at $${(kpis.lowestCash / 1000000).toFixed(2)}M\n`
+  text += `• Runway: ${kpis.runway} weeks at current burn\n`
+  text += `• Avg Burn: $${(kpis.burnRate / 1000).toFixed(0)}K/week\n`
+  text += `• Weeks Below Threshold: ${kpis.belowThreshold}\n`
+  text += `• Payroll Risk Weeks: ${kpis.payrollRisk}\n`
+  text += `• Volatility: ${kpis.volatility}\n`
 
   if (anomalies && anomalies.length > 0) {
-    text += `\n=== DETECTED ANOMALIES (>±20% from average) ===\n`
+    text += `\n=== ANOMALIES ===\n`
     anomalies.forEach((anom) => {
-      text += `${anom.category}: $${anom.amount.toLocaleString()} (${anom.deviation > 0 ? '+' : ''}${anom.deviation.toFixed(1)}% deviation)\n`
+      text += `• ${anom.category}: $${(anom.amount / 1000).toFixed(0)}K (${anom.deviation > 0 ? '+' : ''}${anom.deviation.toFixed(0)}% vs avg)\n`
     })
-  } else {
-    text += `\n=== ANOMALIES ===\nNo significant anomalies detected.\n`
   }
 
   return text

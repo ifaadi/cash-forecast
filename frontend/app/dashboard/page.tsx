@@ -298,6 +298,7 @@ export default function Dashboard() {
       const context: ForecastContext = {
         forecast: forecastData,
         kpis: kpis,
+        safetyThreshold: safetyThreshold,
       }
       const insights = await generateCFOInsights(context)
       setAIInsights(insights)
@@ -316,6 +317,7 @@ export default function Dashboard() {
       const context: ForecastContext = {
         forecast: forecastData,
         kpis: kpis,
+        safetyThreshold: safetyThreshold,
       }
       const analysis = await askCFO(
         `EMERGENCY ANALYSIS NEEDED: I need immediate help understanding my cash position. Current situation:
