@@ -60,13 +60,13 @@ export default function Dashboard() {
 
   // Update forecast when parameters change (debounced)
   useEffect(() => {
-    console.log('🔄 Database update effect triggered', { companyId, forecastId, updating, revenueConfidence, expenseBuffer, safetyThreshold })
-    if (companyId && forecastId && !updating) {
-      console.log('✅ Starting database update...')
+    console.log('🔄 Slider changed', { revenueConfidence, expenseBuffer, safetyThreshold })
+    if (companyId && forecastId && !updating && !loading) {
+      console.log('✅ Scheduling database update...')
       const timeoutId = setTimeout(async () => {
         try {
           setUpdating(true)
-          console.log('📤 Sending to database:', { revenueConfidence, expenseBuffer, safetyThreshold, forecastWeeks, startDate })
+          console.log('📤 Updating forecast:', { revenueConfidence, expenseBuffer, safetyThreshold, forecastWeeks, startDate })
           const updatedForecast = await updateForecast(forecastId, {
             revenue_confidence: revenueConfidence,
             expense_buffer: expenseBuffer,
@@ -75,7 +75,7 @@ export default function Dashboard() {
             start_date: startDate,
           })
 
-          console.log('📥 Received from database:', updatedForecast)
+          console.log('📥 Got updated forecast:', !!updatedForecast)
 
           if (updatedForecast) {
             const displayData = updatedForecast.forecast_weeks
@@ -112,20 +112,21 @@ export default function Dashboard() {
               volatility: avgBurnRate > 600000 ? 'High' : avgBurnRate > 300000 ? 'Medium' : 'Low',
               volatilityScore: Math.round(avgBurnRate),
             }
-            console.log('📊 New KPIs calculated:', newKPIs)
+            console.log('📊 Updated KPIs:', newKPIs)
             setKPIs(newKPIs)
           }
         } catch (error) {
-          console.error('❌ Error updating forecast:', error)
+          console.error('❌ Update error:', error)
         } finally {
           setUpdating(false)
         }
-      }, 500) // Debounce for better performance
+      }, 500)
       return () => clearTimeout(timeoutId)
     } else {
-      console.log('⏭️ Skipping database update:', { hasCompanyId: !!companyId, hasForecastId: !!forecastId, isUpdating: updating })
+      console.log('⏭️ Skipped update:', { hasCompanyId: !!companyId, hasForecastId: !!forecastId, isUpdating: updating, isLoading: loading })
     }
-  }, [companyId, forecastId, updating, revenueConfidence, expenseBuffer, safetyThreshold, startDate, forecastWeeks])
+    // NOTE: Do NOT include 'updating' in dependencies - it would create a loop!
+  }, [companyId, forecastId, loading, revenueConfidence, expenseBuffer, safetyThreshold, startDate, forecastWeeks])
 
   // Update mock data when sliders change (for users without company_id)
   useEffect(() => {
