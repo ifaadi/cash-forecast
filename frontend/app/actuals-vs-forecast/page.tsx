@@ -85,6 +85,22 @@ export default function ActualsVsForecastPage() {
   }
 
   const loadComparison = async () => {
+    // Get forecast data from database
+    const { data: forecasts } = await supabase
+      .from('forecasts')
+      .select(`
+        id,
+        start_date,
+        forecast_weeks (
+          week_number,
+          week_date,
+          net
+        )
+      `)
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+      .single()
+
     // Get actual transactions
     const { data: transactions, error } = await supabase
       .from('transactions')
@@ -100,7 +116,7 @@ export default function ActualsVsForecastPage() {
     }
 
     // Generate comparison data (forecast vs actuals)
-    const comparison = generateComparison(transactions || [], startDate, endDate)
+    const comparison = generateComparison(transactions || [], forecasts?.forecast_weeks || [], startDate, endDate)
     setComparisonData(comparison)
 
     // Calculate metrics
@@ -116,7 +132,7 @@ export default function ActualsVsForecastPage() {
     }
   }
 
-  const generateComparison = (transactions: any[], start: string, end: string): ComparisonData[] => {
+  const generateComparison = (transactions: any[], forecastWeeks: any[], start: string, end: string): ComparisonData[] => {
     const startD = new Date(start)
     const endD = new Date(end)
     const weeks: ComparisonData[] = []
@@ -136,14 +152,18 @@ export default function ActualsVsForecastPage() {
 
       const actualInflow = weekTransactions
         .filter(t => t.type === 'Inflow')
-        .reduce((sum, t) => sum + t.amount, 0)
+        .reduce((sum, t) => sum + Number(t.amount), 0)
       const actualOutflow = weekTransactions
         .filter(t => t.type === 'Outflow')
-        .reduce((sum, t) => sum + t.amount, 0)
+        .reduce((sum, t) => sum + Number(t.amount), 0)
       const actualNet = actualInflow - actualOutflow
 
-      // Generate forecasted value (mock for now - in production, use saved forecasts)
-      const forecastedNet = generateMockForecast(weekNum)
+      // Get forecasted value from database or use mock if no forecast
+      const forecastWeek = forecastWeeks.find((fw: any) => {
+        const fwDate = new Date(fw.week_date)
+        return fwDate >= currentWeekStart && fwDate <= currentWeekEnd
+      })
+      const forecastedNet = forecastWeek?.net || generateMockForecast(weekNum)
 
       const variance = actualNet - forecastedNet
       const variancePct = forecastedNet !== 0 ? (variance / Math.abs(forecastedNet)) * 100 : 0
@@ -435,6 +455,109 @@ export default function ActualsVsForecastPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Action Buttons */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+          {/* Revenue Actions */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center text-green-700">
+                <span className="mr-2">💰</span> Revenue Actions
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button
+                onClick={() => router.push('/transactions?filter=Inflow')}
+                className="w-full justify-start bg-green-600 hover:bg-green-700"
+                size="sm"
+              >
+                Review Receivables →
+              </Button>
+              <Button
+                onClick={() => router.push('/chat?question=How+to+accelerate+cash')}
+                className="w-full justify-start bg-green-600 hover:bg-green-700"
+                size="sm"
+              >
+                Ask: "How to accelerate cash?" →
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Cost Actions */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center text-orange-700">
+                <span className="mr-2">📉</span> Cost Actions
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button
+                onClick={() => router.push('/analytics')}
+                className="w-full justify-start bg-orange-600 hover:bg-orange-700"
+                size="sm"
+              >
+                View Top Expenses →
+              </Button>
+              <Button
+                onClick={() => router.push('/transactions?filter=Outflow')}
+                className="w-full justify-start bg-orange-600 hover:bg-orange-700"
+                size="sm"
+              >
+                Cut Non-Essentials →
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Get Help */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center text-blue-700">
+                <span className="mr-2">📞</span> Get Help
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button
+                onClick={() => router.push('/chat')}
+                className="w-full justify-start bg-blue-600 hover:bg-blue-700"
+                size="sm"
+              >
+                Talk to AI CFO →
+              </Button>
+              <Button
+                onClick={() => window.open('mailto:cfo@wphome.com?subject=Forecast Accuracy Review', '_blank')}
+                className="w-full justify-start bg-blue-600 hover:bg-blue-700"
+                size="sm"
+              >
+                Contact Financial Advisor →
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Forecast Tools */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center text-purple-700">
+                <span className="mr-2">🔮</span> Forecast Tools
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button
+                onClick={() => router.push('/dashboard')}
+                className="w-full justify-start bg-purple-600 hover:bg-purple-700"
+                size="sm"
+              >
+                Run Scenarios →
+              </Button>
+              <Button
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                className="w-full justify-start bg-purple-600 hover:bg-purple-700"
+                size="sm"
+              >
+                Check Forecast Accuracy →
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )

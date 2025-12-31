@@ -154,6 +154,11 @@ export default function TransactionsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (!companyId) {
+      alert('Error: Company ID not found. Please ensure you have a company profile set up.')
+      return
+    }
+
     const transactionData = {
       company_id: companyId,
       transaction_date: formData.transaction_date,
@@ -162,6 +167,7 @@ export default function TransactionsPage() {
       amount: parseFloat(formData.amount),
       description: formData.description || null,
       is_recurring: formData.is_recurring,
+      created_by: user?.id,
     }
 
     if (editingTransaction) {
