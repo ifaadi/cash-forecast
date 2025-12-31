@@ -66,7 +66,8 @@ export default function Dashboard() {
       }, 500) // Debounce for better performance
       return () => clearTimeout(timeoutId)
     }
-  }, [companyId, forecastId, updating, updateForecastData])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyId, forecastId, updating, revenueConfidence, expenseBuffer, safetyThreshold, startDate, forecastWeeks])
 
   // Update mock data when sliders change (for users without company_id)
   useEffect(() => {
@@ -150,7 +151,8 @@ export default function Dashboard() {
     } finally {
       setLoading(false)
     }
-  }, [companyId, calculateKPIs])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyId])
 
   const updateForecastData = useCallback(async () => {
     if (!forecastId) return
@@ -185,7 +187,8 @@ export default function Dashboard() {
     } finally {
       setUpdating(false)
     }
-  }, [forecastId, revenueConfidence, expenseBuffer, safetyThreshold, forecastWeeks, startDate, calculateKPIs])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forecastId, revenueConfidence, expenseBuffer, safetyThreshold, forecastWeeks, startDate])
 
   const calculateKPIs = useCallback((data: any[]) => {
     const balances = data.map(f => f.balance)
