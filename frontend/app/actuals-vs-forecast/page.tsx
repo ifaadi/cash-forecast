@@ -846,7 +846,6 @@ export default function ActualsVsForecastPage() {
             </CardContent>
           </Card>
         )}
-      </div>
     </div>
   )
 }
