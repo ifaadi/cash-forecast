@@ -107,7 +107,7 @@ export default function ChatPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Card className="h-[calc(100vh-250px)] flex flex-col">
+      <Card className="h-[calc(100vh-250px)] flex flex-col">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Chat with your AI CFO Assistant</CardTitle>
             <p className="text-sm text-muted-foreground">
@@ -190,8 +190,8 @@ export default function ChatPage() {
           </CardContent>
         </Card>
 
-        {/* Info Card */}
-        <Card className="mt-4">
+      {/* Info Card */}
+      <Card className="mt-4">
           <CardContent className="pt-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div>

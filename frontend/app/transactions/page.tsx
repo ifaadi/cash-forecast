@@ -377,8 +377,8 @@ export default function TransactionsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>Total Inflows</CardDescription>
@@ -412,8 +412,8 @@ export default function TransactionsPage() {
           </Card>
         </div>
 
-        {/* Filters and Actions */}
-        <Card className="mb-6">
+      {/* Filters and Actions */}
+      <Card className="mb-6">
           <CardHeader>
             <div className="flex justify-between items-center">
               <CardTitle>Filters</CardTitle>
@@ -507,8 +507,8 @@ export default function TransactionsPage() {
           </CardContent>
         </Card>
 
-        {/* Transactions Table */}
-        <Card>
+      {/* Transactions Table */}
+      <Card>
           <CardHeader>
             <CardTitle>Transactions ({filteredTransactions.length})</CardTitle>
           </CardHeader>
@@ -584,7 +584,7 @@ export default function TransactionsPage() {
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h2 className="text-xl font-bold mb-4">
               {editingTransaction ? 'Edit Transaction' : 'Add New Transaction'}

@@ -223,8 +223,8 @@ export default function AnalyticsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Filters */}
-        <Card className="mb-6">
+      {/* Filters */}
+      <Card className="mb-6">
           <CardHeader>
             <CardTitle>Analysis Period</CardTitle>
           </CardHeader>
@@ -261,8 +261,8 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      {/* Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>Total Inflows</CardDescription>
@@ -318,8 +318,8 @@ export default function AnalyticsPage() {
           </Card>
         </div>
 
-        {/* Trends Chart */}
-        <Card className="mb-6">
+      {/* Trends Chart */}
+      <Card className="mb-6">
           <CardHeader>
             <CardTitle>Cash Flow Trends</CardTitle>
             <CardDescription>{timeframe === 'weekly' ? 'Weekly' : 'Monthly'} inflows, outflows, and net cash flow</CardDescription>
@@ -340,8 +340,8 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        {/* Category Breakdown */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      {/* Category Breakdown */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Inflow Categories */}
           <Card>
             <CardHeader>
@@ -427,8 +427,8 @@ export default function AnalyticsPage() {
           </Card>
         </div>
 
-        {/* Insights */}
-        <Card>
+      {/* Insights */}
+      <Card>
           <CardHeader>
             <CardTitle>Key Insights</CardTitle>
           </CardHeader>

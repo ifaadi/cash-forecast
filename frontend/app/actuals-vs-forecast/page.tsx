@@ -347,8 +347,8 @@ export default function ActualsVsForecastPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Date Range Selector */}
-        <Card className="mb-6">
+      {/* Date Range Selector */}
+      <Card className="mb-6">
           <CardHeader>
             <CardTitle>Select Date Range</CardTitle>
             <CardDescription>Compare forecast accuracy over time</CardDescription>
@@ -375,8 +375,8 @@ export default function ActualsVsForecastPage() {
           </CardContent>
         </Card>
 
-        {/* Summary Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      {/* Summary Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>Forecast Accuracy Score</CardDescription>
@@ -415,8 +415,8 @@ export default function ActualsVsForecastPage() {
           </Card>
         </div>
 
-        {/* Manual Forecast Entry */}
-        <Card className="mb-6">
+      {/* Manual Forecast Entry */}
+      <Card className="mb-6">
           <CardHeader>
             <div className="flex justify-between items-center">
               <div>
@@ -582,8 +582,8 @@ export default function ActualsVsForecastPage() {
           </CardContent>
         </Card>
 
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Forecast vs Actual Line Chart */}
           <Card>
             <CardHeader>
@@ -668,8 +668,8 @@ export default function ActualsVsForecastPage() {
           </Card>
         </div>
 
-        {/* Detailed Table */}
-        <Card>
+      {/* Detailed Table */}
+      <Card>
           <CardHeader>
             <CardTitle>Weekly Breakdown</CardTitle>
             <CardDescription>Detailed variance analysis</CardDescription>
@@ -733,7 +733,7 @@ export default function ActualsVsForecastPage() {
           </CardContent>
         </Card>
 
-        {/* Insights - Traffic Light Format */}
+      {/* Insights - Traffic Light Format */}
         {comparisonData.length > 0 && (
           <Card className="mt-6">
             <CardHeader>
