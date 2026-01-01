@@ -354,8 +354,8 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Scenario Controls */}
-        <Card className="mb-6">
+      {/* Scenario Controls */}
+      <Card className="mb-6">
           <CardHeader>
             <CardTitle>Forecast Settings & Scenario Planning</CardTitle>
             <CardDescription>Configure forecast period and adjust scenarios</CardDescription>
@@ -432,8 +432,8 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* KPI Cards - Modern Design */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+      {/* KPI Cards - Modern Design */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
@@ -500,8 +500,8 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Cash Balance Chart */}
           <Card>
             <CardHeader>
@@ -563,8 +563,8 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* AI Insights */}
-        <Card>
+      {/* AI Insights */}
+      <Card>
           <CardHeader>
             <div className="flex justify-between items-center">
               <div>
@@ -606,7 +606,7 @@ export default function Dashboard() {
 
       {/* Panic Mode Modal */}
       {showPanicMode && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="bg-gradient-to-r from-red-600 to-red-700 p-6 text-white">
               <div className="flex justify-between items-start">
