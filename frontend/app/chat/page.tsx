@@ -106,35 +106,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">💬 Ask the CFO</h1>
-              <p className="text-sm text-gray-600">AI-powered financial insights</p>
-            </div>
-          </div>
-          {/* Navigation */}
-          <nav className="flex gap-4 border-t pt-4">
-            <Button onClick={() => router.push('/dashboard')} variant="outline" size="sm">
-              Dashboard
-            </Button>
-            <Button onClick={() => router.push('/transactions')} variant="outline" size="sm">
-              Transactions
-            </Button>
-            <Button onClick={() => router.push('/actuals-vs-forecast')} variant="outline" size="sm">
-              Actuals vs Forecast
-            </Button>
-            <Button onClick={() => router.push('/chat')} variant="default" size="sm">
-              Ask CFO
-            </Button>
-          </nav>
-        </div>
-      </header>
-
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card className="h-[calc(100vh-250px)] flex flex-col">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Chat with your AI CFO Assistant</CardTitle>

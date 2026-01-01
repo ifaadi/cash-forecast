@@ -346,35 +346,7 @@ export default function ActualsVsForecastPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">📊 Actuals vs Forecast</h1>
-              <p className="text-sm text-gray-600">Track forecast accuracy and learn from variances</p>
-            </div>
-          </div>
-          {/* Navigation */}
-          <nav className="flex gap-4 border-t pt-4">
-            <Button onClick={() => router.push('/dashboard')} variant="outline" size="sm">
-              Dashboard
-            </Button>
-            <Button onClick={() => router.push('/transactions')} variant="outline" size="sm">
-              Transactions
-            </Button>
-            <Button onClick={() => router.push('/actuals-vs-forecast')} variant="default" size="sm">
-              Actuals vs Forecast
-            </Button>
-            <Button onClick={() => router.push('/chat')} variant="outline" size="sm">
-              Ask CFO
-            </Button>
-          </nav>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Date Range Selector */}
         <Card className="mb-6">
           <CardHeader>

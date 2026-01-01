@@ -222,38 +222,7 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">📈 Analytics</h1>
-              <p className="text-sm text-gray-600">Comprehensive financial insights and trends</p>
-            </div>
-          </div>
-          {/* Navigation */}
-          <nav className="flex gap-4 border-t pt-4">
-            <Button onClick={() => router.push('/dashboard')} variant="outline" size="sm">
-              Dashboard
-            </Button>
-            <Button onClick={() => router.push('/transactions')} variant="outline" size="sm">
-              Transactions
-            </Button>
-            <Button onClick={() => router.push('/actuals-vs-forecast')} variant="outline" size="sm">
-              Actuals vs Forecast
-            </Button>
-            <Button onClick={() => router.push('/analytics')} variant="default" size="sm">
-              Analytics
-            </Button>
-            <Button onClick={() => router.push('/chat')} variant="outline" size="sm">
-              Ask CFO
-            </Button>
-          </nav>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Filters */}
         <Card className="mb-6">
           <CardHeader>
