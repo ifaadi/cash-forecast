@@ -601,8 +601,7 @@ export default function Dashboard() {
               </div>
             )}
           </CardContent>
-        </Card>
-      </div>
+      </Card>
 
       {/* Panic Mode Modal */}
       {showPanicMode && (

@@ -259,7 +259,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
           </CardContent>
-        </Card>
+      </Card>
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -338,7 +338,7 @@ export default function AnalyticsPage() {
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
-        </Card>
+      </Card>
 
       {/* Category Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -481,7 +481,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
           </CardContent>
-        </Card>
+      </Card>
     </div>
   )
 }

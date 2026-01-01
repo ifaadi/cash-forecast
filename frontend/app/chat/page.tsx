@@ -188,7 +188,7 @@ export default function ChatPage() {
               ))}
             </div>
           </CardContent>
-        </Card>
+      </Card>
 
       {/* Info Card */}
       <Card className="mt-4">
@@ -223,7 +223,7 @@ export default function ChatPage() {
               </div>
             </div>
           </CardContent>
-        </Card>
+      </Card>
     </div>
   )
 }

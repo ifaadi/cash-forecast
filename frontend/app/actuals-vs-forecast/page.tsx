@@ -373,7 +373,7 @@ export default function ActualsVsForecastPage() {
               </div>
             </div>
           </CardContent>
-        </Card>
+      </Card>
 
       {/* Summary Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -580,7 +580,7 @@ export default function ActualsVsForecastPage() {
               </Button>
             </div>
           </CardContent>
-        </Card>
+      </Card>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -731,7 +731,7 @@ export default function ActualsVsForecastPage() {
               </table>
             </div>
           </CardContent>
-        </Card>
+      </Card>
 
       {/* Insights - Traffic Light Format */}
         {comparisonData.length > 0 && (

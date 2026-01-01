@@ -579,8 +579,7 @@ export default function TransactionsPage() {
               </table>
             </div>
           </CardContent>
-        </Card>
-      </div>
+      </Card>
 
       {/* Add/Edit Modal */}
       {showModal && (
