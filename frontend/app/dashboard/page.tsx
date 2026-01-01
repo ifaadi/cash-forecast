@@ -23,12 +23,14 @@ import {
   ReferenceLine,
 } from 'recharts'
 import { Sparkles, Loader2, AlertTriangle, Phone, DollarSign, TrendingDown, Zap } from 'lucide-react'
+import { useHeader } from '@/components/header-context'
 
 // Force dynamic rendering (disable static generation)
 export const dynamic = 'force-dynamic'
 
 export default function Dashboard() {
   const router = useRouter()
+  const { setPanicModeHandler } = useHeader()
   const [user, setUser] = useState<any>(null)
   const [companyId, setCompanyId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -47,9 +49,50 @@ export default function Dashboard() {
   const [loadingPanic, setLoadingPanic] = useState(false)
   const [updating, setUpdating] = useState(false)
 
+  const handlePanicMode = async () => {
+    setShowPanicMode(true)
+    setLoadingPanic(true)
+    try {
+      const context: ForecastContext = {
+        forecast: forecastData,
+        kpis: kpis,
+        safetyThreshold: safetyThreshold,
+      }
+      const analysis = await askCFO(
+        `EMERGENCY ANALYSIS NEEDED: I need immediate help understanding my cash position. Current situation:
+        - Cash runway: ${kpis.runway} weeks
+        - Lowest cash point: ${formatCurrency(kpis.lowestCash)} at week ${kpis.lowestWeek}
+        - Weeks below threshold: ${kpis.belowThreshold}
+        - Volatility: ${kpis.volatility}
+
+        Please provide:
+        1. IMMEDIATE RISKS (next 2 weeks)
+        2. TOP 3 PRIORITY ACTIONS I must take today
+        3. What expenses to cut first
+        4. Revenue acceleration opportunities
+        5. Should I raise capital? If yes, how much and by when?
+
+        Be direct and actionable. I need clarity, not theory.`,
+        context
+      )
+      setPanicAnalysis(analysis)
+    } catch (error) {
+      console.error('Error generating panic analysis:', error)
+      setPanicAnalysis('Unable to generate emergency analysis. Please try again or contact support immediately.')
+    } finally {
+      setLoadingPanic(false)
+    }
+  }
+
   useEffect(() => {
     checkUser()
   }, [])
+
+  // Register panic mode handler with header
+  useEffect(() => {
+    setPanicModeHandler(() => handlePanicMode)
+    return () => setPanicModeHandler(null)
+  }, [setPanicModeHandler, forecastData, kpis, safetyThreshold])
 
   // Load initial forecast
   useEffect(() => {
@@ -287,11 +330,6 @@ export default function Dashboard() {
     return `$${value}`
   }
 
-  const handleLogout = useCallback(async () => {
-    await supabase.auth.signOut()
-    router.push('/')
-  }, [])
-
   const generateInsights = async () => {
     setLoadingAI(true)
     try {
@@ -310,90 +348,12 @@ export default function Dashboard() {
     }
   }
 
-  const handlePanicMode = async () => {
-    setShowPanicMode(true)
-    setLoadingPanic(true)
-    try {
-      const context: ForecastContext = {
-        forecast: forecastData,
-        kpis: kpis,
-        safetyThreshold: safetyThreshold,
-      }
-      const analysis = await askCFO(
-        `EMERGENCY ANALYSIS NEEDED: I need immediate help understanding my cash position. Current situation:
-        - Cash runway: ${kpis.runway} weeks
-        - Lowest cash point: ${formatCurrency(kpis.lowestCash)} at week ${kpis.lowestWeek}
-        - Weeks below threshold: ${kpis.belowThreshold}
-        - Volatility: ${kpis.volatility}
-
-        Please provide:
-        1. IMMEDIATE RISKS (next 2 weeks)
-        2. TOP 3 PRIORITY ACTIONS I must take today
-        3. What expenses to cut first
-        4. Revenue acceleration opportunities
-        5. Should I raise capital? If yes, how much and by when?
-
-        Be direct and actionable. I need clarity, not theory.`,
-        context
-      )
-      setPanicAnalysis(analysis)
-    } catch (error) {
-      console.error('Error generating panic analysis:', error)
-      setPanicAnalysis('Unable to generate emergency analysis. Please try again or contact support immediately.')
-    } finally {
-      setLoadingPanic(false)
-    }
-  }
-
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">💰 CFO Cash Command</h1>
-              <p className="text-sm text-gray-600">{user?.email}</p>
-            </div>
-            <div className="flex gap-3">
-              <Button
-                onClick={handlePanicMode}
-                className="bg-red-600 hover:bg-red-700 text-white font-bold animate-pulse"
-              >
-                <AlertTriangle className="h-5 w-5 mr-2" />
-                🚨 PANIC MODE
-              </Button>
-              <Button onClick={handleLogout} variant="outline">
-                Logout
-              </Button>
-            </div>
-          </div>
-          {/* Navigation */}
-          <nav className="flex gap-4 border-t pt-4">
-            <Button onClick={() => router.push('/dashboard')} variant="default" size="sm">
-              Dashboard
-            </Button>
-            <Button onClick={() => router.push('/transactions')} variant="outline" size="sm">
-              Transactions
-            </Button>
-            <Button onClick={() => router.push('/actuals-vs-forecast')} variant="outline" size="sm">
-              Actuals vs Forecast
-            </Button>
-            <Button onClick={() => router.push('/analytics')} variant="outline" size="sm">
-              Analytics
-            </Button>
-            <Button onClick={() => router.push('/chat')} variant="outline" size="sm">
-              Ask CFO
-            </Button>
-          </nav>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Scenario Controls */}
         <Card className="mb-6">
           <CardHeader>
