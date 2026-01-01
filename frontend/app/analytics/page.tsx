@@ -482,7 +482,6 @@ export default function AnalyticsPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
     </div>
   )
 }

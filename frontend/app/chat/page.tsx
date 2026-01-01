@@ -224,7 +224,6 @@ export default function ChatPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
     </div>
   )
 }
