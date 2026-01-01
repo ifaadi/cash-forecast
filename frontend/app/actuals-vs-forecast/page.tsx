@@ -19,7 +19,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
-import { TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react'
+import { TrendingUp, TrendingDown, AlertTriangle, Upload, Save, RefreshCw } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,6 +43,11 @@ export default function ActualsVsForecastPage() {
   const [accuracyScore, setAccuracyScore] = useState(0)
   const [avgVariance, setAvgVariance] = useState(0)
   const [avgVariancePct, setAvgVariancePct] = useState(0)
+  const [manualForecastData, setManualForecastData] = useState<Array<{ weekNumber: number, weekDate: string, forecastedNet: number }>>([])
+  const [editingWeek, setEditingWeek] = useState<number | null>(null)
+  const [editValue, setEditValue] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [forecastId, setForecastId] = useState<string>('')
 
   useEffect(() => {
     checkUser()
@@ -101,6 +106,10 @@ export default function ActualsVsForecastPage() {
       .eq('is_active', true)
       .single()
 
+    if (forecasts?.id) {
+      setForecastId(forecasts.id)
+    }
+
     // Get actual transactions
     const { data: transactions, error } = await supabase
       .from('transactions')
@@ -114,6 +123,9 @@ export default function ActualsVsForecastPage() {
       console.error('Error loading transactions:', error)
       return
     }
+
+    // Initialize manual forecast data structure based on date range
+    initializeManualForecastData(forecasts?.forecast_weeks || [])
 
     // Generate comparison data (forecast vs actuals)
     const comparison = generateComparison(transactions || [], forecasts?.forecast_weeks || [], startDate, endDate)
@@ -130,6 +142,125 @@ export default function ActualsVsForecastPage() {
       setAvgVariancePct(avgVarPct)
       setAccuracyScore(accuracy)
     }
+  }
+
+  const initializeManualForecastData = (forecastWeeks: any[]) => {
+    const startD = new Date(startDate)
+    const endD = new Date(endDate)
+    const weeks: Array<{ weekNumber: number, weekDate: string, forecastedNet: number }> = []
+
+    let weekNum = 1
+    let currentWeekStart = new Date(startD)
+
+    while (currentWeekStart <= endD) {
+      // Get existing forecast value if available
+      const existingForecast = forecastWeeks.find((fw: any) => {
+        const fwDate = new Date(fw.week_date)
+        const currentWeekEnd = new Date(currentWeekStart)
+        currentWeekEnd.setDate(currentWeekStart.getDate() + 6)
+        return fwDate >= currentWeekStart && fwDate <= currentWeekEnd
+      })
+
+      weeks.push({
+        weekNumber: weekNum,
+        weekDate: currentWeekStart.toISOString().split('T')[0],
+        forecastedNet: existingForecast?.net || 0,
+      })
+
+      currentWeekStart.setDate(currentWeekStart.getDate() + 7)
+      weekNum++
+
+      if (weekNum > 52) break
+    }
+
+    setManualForecastData(weeks)
+  }
+
+  const saveManualForecast = async () => {
+    if (!forecastId) {
+      alert('No active forecast found. Please create a forecast from the Dashboard first.')
+      return
+    }
+
+    setSaving(true)
+    try {
+      // Update forecast_weeks with manual values
+      for (const week of manualForecastData) {
+        const { error } = await supabase
+          .from('forecast_weeks')
+          .upsert({
+            forecast_id: forecastId,
+            week_number: week.weekNumber,
+            week_date: week.weekDate,
+            net: week.forecastedNet,
+            inflow: week.forecastedNet > 0 ? week.forecastedNet : 0,
+            outflow: week.forecastedNet < 0 ? Math.abs(week.forecastedNet) : 0,
+            balance: 0, // Will be recalculated
+            is_manual: true, // Mark as manually entered
+          }, {
+            onConflict: 'forecast_id,week_number'
+          })
+
+        if (error) {
+          console.error('Error saving week:', error)
+        }
+      }
+
+      alert('Manual forecast saved successfully!')
+      loadComparison() // Reload to show updated comparison
+    } catch (error) {
+      console.error('Error saving manual forecast:', error)
+      alert('Failed to save manual forecast')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleCSVUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      const text = e.target?.result as string
+      const lines = text.split('\n')
+
+      // Skip header row
+      const dataLines = lines.slice(1).filter(line => line.trim())
+
+      const uploadedData: Array<{ weekNumber: number, weekDate: string, forecastedNet: number }> = []
+
+      dataLines.forEach((line, index) => {
+        const [weekDate, forecastedNet] = line.split(',')
+        if (weekDate && forecastedNet) {
+          uploadedData.push({
+            weekNumber: index + 1,
+            weekDate: weekDate.trim(),
+            forecastedNet: parseFloat(forecastedNet.trim()),
+          })
+        }
+      })
+
+      if (uploadedData.length > 0) {
+        setManualForecastData(uploadedData)
+        alert(`Loaded ${uploadedData.length} weeks from CSV`)
+      }
+    }
+
+    reader.readAsText(file)
+  }
+
+  const updateWeekForecast = (weekNumber: number, value: string) => {
+    const numValue = parseFloat(value) || 0
+    setManualForecastData(prev =>
+      prev.map(week =>
+        week.weekNumber === weekNumber
+          ? { ...week, forecastedNet: numValue }
+          : week
+      )
+    )
+    setEditingWeek(null)
+    setEditValue('')
   }
 
   const generateComparison = (transactions: any[], forecastWeeks: any[], start: string, end: string): ComparisonData[] => {
@@ -193,6 +324,19 @@ export default function ActualsVsForecastPage() {
     const baseInflow = 900000 // $900K inflow
     const baseOutflow = weekNum % 2 === 0 ? 1000000 : 400000 // $1M or $400K outflow
     return baseInflow - baseOutflow
+  }
+
+  const formatYAxis = (value: number) => {
+    if (value >= 1000000) {
+      return `$${(value / 1000000).toFixed(1)}M`
+    } else if (value >= 1000) {
+      return `$${(value / 1000).toFixed(0)}K`
+    } else if (value <= -1000000) {
+      return `-$${(Math.abs(value) / 1000000).toFixed(1)}M`
+    } else if (value <= -1000) {
+      return `-$${(Math.abs(value) / 1000).toFixed(0)}K`
+    }
+    return `$${value}`
   }
 
   if (loading) {
@@ -297,6 +441,173 @@ export default function ActualsVsForecastPage() {
           </Card>
         </div>
 
+        {/* Manual Forecast Entry */}
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>📝 Manual Weekly Forecast Entry</CardTitle>
+                <CardDescription>
+                  Enter or upload your weekly cash flow forecast for comparison with actual transactions
+                </CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <label htmlFor="csv-upload">
+                  <Button variant="outline" size="sm" asChild>
+                    <span className="cursor-pointer">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload CSV
+                    </span>
+                  </Button>
+                  <input
+                    id="csv-upload"
+                    type="file"
+                    accept=".csv"
+                    onChange={handleCSVUpload}
+                    className="hidden"
+                  />
+                </label>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={saveManualForecast}
+                  disabled={saving}
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {saving ? 'Saving...' : 'Save Forecast'}
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-sm text-blue-900">
+                <strong>How to use:</strong>
+              </p>
+              <ul className="text-sm text-blue-800 mt-1 list-disc list-inside">
+                <li>Click on any "Forecasted Net" cell to edit the value</li>
+                <li>Enter positive numbers for expected net inflow, negative for outflow</li>
+                <li>Upload a CSV file with columns: Week Date, Forecasted Net Cash Flow</li>
+                <li>Click "Save Forecast" to persist your manual forecast to the database</li>
+                <li>These values will be used for "Forecast vs Actual" comparison below</li>
+              </ul>
+            </div>
+
+            <div className="overflow-x-auto max-h-96 overflow-y-auto border rounded-lg">
+              <table className="w-full">
+                <thead className="bg-gray-100 sticky top-0">
+                  <tr>
+                    <th className="text-left py-3 px-4 border-b">Week #</th>
+                    <th className="text-left py-3 px-4 border-b">Week Date</th>
+                    <th className="text-right py-3 px-4 border-b">Forecasted Net Cash Flow</th>
+                    <th className="text-center py-3 px-4 border-b">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {manualForecastData.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="text-center py-8 text-gray-500">
+                        Set a date range above to start entering forecast data
+                      </td>
+                    </tr>
+                  ) : (
+                    manualForecastData.map((week) => (
+                      <tr key={week.weekNumber} className="border-b hover:bg-gray-50">
+                        <td className="py-3 px-4">W{week.weekNumber}</td>
+                        <td className="py-3 px-4">
+                          {new Date(week.weekDate).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          {editingWeek === week.weekNumber ? (
+                            <div className="flex justify-end gap-2">
+                              <Input
+                                type="number"
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    updateWeekForecast(week.weekNumber, editValue)
+                                  } else if (e.key === 'Escape') {
+                                    setEditingWeek(null)
+                                    setEditValue('')
+                                  }
+                                }}
+                                className="w-40 text-right"
+                                autoFocus
+                              />
+                              <Button
+                                size="sm"
+                                onClick={() => updateWeekForecast(week.weekNumber, editValue)}
+                              >
+                                ✓
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setEditingWeek(null)
+                                  setEditValue('')
+                                }}
+                              >
+                                ✕
+                              </Button>
+                            </div>
+                          ) : (
+                            <span
+                              className={`font-medium cursor-pointer hover:bg-gray-100 px-2 py-1 rounded ${
+                                week.forecastedNet >= 0 ? 'text-green-600' : 'text-red-600'
+                              }`}
+                              onClick={() => {
+                                setEditingWeek(week.weekNumber)
+                                setEditValue(week.forecastedNet.toString())
+                              }}
+                            >
+                              {formatCurrency(week.forecastedNet)}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditingWeek(week.weekNumber)
+                              setEditValue(week.forecastedNet.toString())
+                            }}
+                          >
+                            Edit
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-4 flex justify-between items-center">
+              <p className="text-sm text-gray-600">
+                {manualForecastData.length} weeks loaded | Total Forecasted:{' '}
+                <span className={manualForecastData.reduce((sum, w) => sum + w.forecastedNet, 0) >= 0 ? 'text-green-600' : 'text-red-600'}>
+                  {formatCurrency(manualForecastData.reduce((sum, w) => sum + w.forecastedNet, 0))}
+                </span>
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => loadComparison()}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh Data
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Forecast vs Actual Line Chart */}
@@ -305,15 +616,41 @@ export default function ActualsVsForecastPage() {
               <CardTitle>Forecast vs Actual Net Cash Flow</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={comparisonData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="week" />
-                  <YAxis />
+              <ResponsiveContainer width="100%" height={350}>
+                <LineChart data={comparisonData} margin={{ top: 5, right: 30, left: 20, bottom: 60 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="week"
+                    tick={{ fontSize: 11 }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                  />
+                  <YAxis
+                    tickFormatter={formatYAxis}
+                    tick={{ fontSize: 12 }}
+                    width={80}
+                  />
                   <Tooltip formatter={(value: any) => formatCurrency(value)} />
-                  <Legend />
-                  <Line type="monotone" dataKey="forecasted" stroke="#3b82f6" strokeWidth={2} name="Forecasted" />
-                  <Line type="monotone" dataKey="actual" stroke="#10b981" strokeWidth={2} name="Actual" />
+                  <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                  <Line
+                    type="monotone"
+                    dataKey="forecasted"
+                    stroke="#3b82f6"
+                    strokeWidth={2.5}
+                    name="Forecasted"
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="actual"
+                    stroke="#10b981"
+                    strokeWidth={2.5}
+                    name="Actual"
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
@@ -325,14 +662,29 @@ export default function ActualsVsForecastPage() {
               <CardTitle>Variance by Week</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={comparisonData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="week" />
-                  <YAxis />
+              <ResponsiveContainer width="100%" height={350}>
+                <BarChart data={comparisonData} margin={{ top: 5, right: 30, left: 20, bottom: 60 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="week"
+                    tick={{ fontSize: 11 }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                  />
+                  <YAxis
+                    tickFormatter={formatYAxis}
+                    tick={{ fontSize: 12 }}
+                    width={80}
+                  />
                   <Tooltip formatter={(value: any) => formatCurrency(value)} />
-                  <Legend />
-                  <Bar dataKey="variance" fill="#f59e0b" name="Variance ($)" />
+                  <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                  <Bar
+                    dataKey="variance"
+                    fill="#f59e0b"
+                    name="Variance ($)"
+                    radius={[4, 4, 0, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
