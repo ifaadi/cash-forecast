@@ -18,6 +18,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  Cell,
 } from 'recharts'
 import { TrendingUp, TrendingDown, AlertTriangle, Upload, Save, RefreshCw } from 'lucide-react'
 
@@ -682,10 +683,13 @@ export default function ActualsVsForecastPage() {
                   <Legend wrapperStyle={{ paddingTop: '10px' }} />
                   <Bar
                     dataKey="variance"
-                    fill="#f59e0b"
                     name="Variance ($)"
                     radius={[4, 4, 0, 0]}
-                  />
+                  >
+                    {comparisonData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.variance >= 0 ? '#10b981' : '#ef4444'} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
